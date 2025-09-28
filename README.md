@@ -4,8 +4,8 @@ A collection of OAuth 2.0 integration examples for Databricks, demonstrating dif
 
 ## 🚀 Available Applications
 
-### 1. **SPA User Authentication** 📱
-**Directory:** `spa-user-auth/`
+### 1. **Custom App - On Behalf of User (Okta SPA)** 📱
+**Directory:** `custom-app-obo-user-okta-spa/`
 
 A Flask web application that authenticates users via Okta OAuth 2.0 with PKCE and provides a SQL interface to Databricks.
 
@@ -18,7 +18,7 @@ A Flask web application that authenticates users via Okta OAuth 2.0 with PKCE an
 
 **Quick Start:**
 ```bash
-cd spa-user-auth
+cd custom-app-obo-user-okta-spa
 cp config.env.example config.env
 # Edit config.env with your Okta/Databricks settings
 python app.py
@@ -76,7 +76,7 @@ Configure your Okta application as:
 ### 1. Clone and Navigate
 ```bash
 git clone https://github.com/surajkaruvel/custom-app-oauth-databricks.git
-cd custom-app-oauth-databricks/spa-user-auth
+cd custom-app-oauth-databricks/custom-app-obo-user-okta-spa
 ```
 
 ### 2. Configure Environment
@@ -99,7 +99,7 @@ Open `http://localhost:5000` in your browser and sign in with Okta.
 
 ```
 custom-app-oauth-databricks/
-├── spa-user-auth/              # SPA User Authentication App
+├── custom-app-obo-user-okta-spa/  # SPA User Authentication App
 │   ├── app.py                  # Main Flask application
 │   ├── config.env.example     # Configuration template
 │   ├── requirements.txt       # Python dependencies
@@ -142,7 +142,7 @@ custom-app-oauth-databricks/
 ### Getting Help
 
 1. Check application logs for detailed error messages
-2. Review the app-specific README in `spa-user-auth/`
+2. Review the app-specific README in `custom-app-obo-user-okta-spa/`
 3. Verify configuration against the example files
 4. Test with minimal sample queries first
 
