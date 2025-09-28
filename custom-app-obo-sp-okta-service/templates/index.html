@@ -1,0 +1,230 @@
+{% extends "base.html" %}
+
+{% block title %}Databricks SQL Interface - Service Principal{% endblock %}
+
+{% block content %}
+<!-- Hero Section -->
+<section class="hero-section">
+    <div class="container text-center">
+        <h1 class="display-4 fw-bold mb-4">
+            <i class="fas fa-robot me-3"></i>
+            Service Principal Application
+        </h1>
+        <p class="lead mb-4">
+            Machine-to-Machine authentication with automatic token management. 
+            Execute SQL queries on Databricks without user interaction.
+        </p>
+        <div class="d-flex justify-content-center gap-3 mb-4">
+            <span class="badge bg-success fs-6 px-3 py-2">
+                <i class="fas fa-robot me-1"></i>
+                M2M Authentication
+            </span>
+            <span class="badge bg-success fs-6 px-3 py-2">
+                <i class="fas fa-database me-1"></i>
+                SQL Interface
+            </span>
+            <span class="badge bg-success fs-6 px-3 py-2">
+                <i class="fas fa-sync-alt me-1"></i>
+                Auto Token Refresh
+            </span>
+        </div>
+        <div class="mt-4">
+            <a href="{{ url_for('sql_interface') }}" class="btn btn-light btn-lg me-3">
+                <i class="fas fa-database me-2"></i>
+                Open SQL Interface
+            </a>
+            <a href="{{ url_for('health') }}" class="btn btn-outline-light btn-lg" target="_blank">
+                <i class="fas fa-heartbeat me-2"></i>
+                Check Health
+            </a>
+        </div>
+    </div>
+</section>
+
+<!-- Features Section -->
+<section class="py-5">
+    <div class="container">
+        <div class="row">
+            <div class="col-lg-8 mx-auto">
+                <h2 class="text-center mb-5">
+                    <i class="fas fa-cogs me-2"></i>
+                    Service Principal Features
+                </h2>
+                
+                <div class="row g-4">
+                    <!-- M2M Authentication -->
+                    <div class="col-md-6">
+                        <div class="card h-100">
+                            <div class="card-body text-center">
+                                <div class="mb-3">
+                                    <i class="fas fa-robot fa-3x text-primary"></i>
+                                </div>
+                                <h5 class="card-title">Machine-to-Machine</h5>
+                                <p class="card-text">
+                                    No user authentication required. Uses OAuth Client Credentials flow 
+                                    for secure service-to-service communication.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Automatic Tokens -->
+                    <div class="col-md-6">
+                        <div class="card h-100">
+                            <div class="card-body text-center">
+                                <div class="mb-3">
+                                    <i class="fas fa-sync-alt fa-3x text-success"></i>
+                                </div>
+                                <h5 class="card-title">Automatic Tokens</h5>
+                                <p class="card-text">
+                                    Tokens are automatically obtained and refreshed. 
+                                    No manual intervention required for token management.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- SQL Interface -->
+                    <div class="col-md-6">
+                        <div class="card h-100">
+                            <div class="card-body text-center">
+                                <div class="mb-3">
+                                    <i class="fas fa-database fa-3x text-info"></i>
+                                </div>
+                                <h5 class="card-title">SQL Interface</h5>
+                                <p class="card-text">
+                                    Execute SQL queries on any Databricks SQL warehouse. 
+                                    Dynamic warehouse selection and result visualization.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Enterprise Security -->
+                    <div class="col-md-6">
+                        <div class="card h-100">
+                            <div class="card-body text-center">
+                                <div class="mb-3">
+                                    <i class="fas fa-shield-alt fa-3x text-warning"></i>
+                                </div>
+                                <h5 class="card-title">Enterprise Security</h5>
+                                <p class="card-text">
+                                    Okta Service Application with client credentials. 
+                                    Secure token exchange with Databricks.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Configuration Status -->
+<section class="py-5 bg-light">
+    <div class="container">
+        <div class="row">
+            <div class="col-lg-8 mx-auto">
+                <h3 class="text-center mb-4">
+                    <i class="fas fa-cog me-2"></i>
+                    Configuration Status
+                </h3>
+                
+                <div class="card">
+                    <div class="card-body">
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <div class="d-flex align-items-center">
+                                    <span class="status-indicator {% if client_id %}status-active{% else %}status-inactive{% endif %}"></span>
+                                    <strong>Service Principal:</strong>
+                                    <span class="ms-2">{{ client_id if client_id else 'Not configured' }}</span>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="d-flex align-items-center">
+                                    <span class="status-indicator {% if server_hostname %}status-active{% else %}status-inactive{% endif %}"></span>
+                                    <strong>Databricks:</strong>
+                                    <span class="ms-2">{{ server_hostname if server_hostname else 'Not configured' }}</span>
+                                </div>
+                            </div>
+                            {% if default_warehouse_id %}
+                            <div class="col-md-6">
+                                <div class="d-flex align-items-center">
+                                    <span class="status-indicator status-active"></span>
+                                    <strong>Default Warehouse:</strong>
+                                    <span class="ms-2">{{ default_warehouse_id }}</span>
+                                </div>
+                            </div>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="mt-4 text-center">
+                            <a href="{{ url_for('health') }}" class="btn btn-outline-primary" target="_blank">
+                                <i class="fas fa-heartbeat me-1"></i>
+                                View Detailed Health Status
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Getting Started -->
+<section class="py-5">
+    <div class="container">
+        <div class="row">
+            <div class="col-lg-8 mx-auto">
+                <h3 class="text-center mb-4">
+                    <i class="fas fa-rocket me-2"></i>
+                    Getting Started
+                </h3>
+                
+                <div class="card">
+                    <div class="card-body">
+                        <ol class="list-group list-group-numbered list-group-flush">
+                            <li class="list-group-item d-flex justify-content-between align-items-start">
+                                <div class="ms-2 me-auto">
+                                    <div class="fw-bold">Create Okta Service Application</div>
+                                    Create an "API Services" application in Okta Admin Console
+                                </div>
+                                <span class="badge bg-primary rounded-pill">Setup</span>
+                            </li>
+                            <li class="list-group-item d-flex justify-content-between align-items-start">
+                                <div class="ms-2 me-auto">
+                                    <div class="fw-bold">Configure Databricks Federation</div>
+                                    Set up federation policy to accept Okta tokens
+                                </div>
+                                <span class="badge bg-primary rounded-pill">Setup</span>
+                            </li>
+                            <li class="list-group-item d-flex justify-content-between align-items-start">
+                                <div class="ms-2 me-auto">
+                                    <div class="fw-bold">Update Configuration</div>
+                                    Copy config.env.example to config.env and fill in your values
+                                </div>
+                                <span class="badge bg-success rounded-pill">Config</span>
+                            </li>
+                            <li class="list-group-item d-flex justify-content-between align-items-start">
+                                <div class="ms-2 me-auto">
+                                    <div class="fw-bold">Start Querying</div>
+                                    Use the SQL interface to execute queries automatically
+                                </div>
+                                <span class="badge bg-success rounded-pill">Ready</span>
+                            </li>
+                        </ol>
+                        
+                        <div class="mt-4 text-center">
+                            <a href="{{ url_for('sql_interface') }}" class="btn btn-primary btn-lg">
+                                <i class="fas fa-database me-2"></i>
+                                Start Using SQL Interface
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}

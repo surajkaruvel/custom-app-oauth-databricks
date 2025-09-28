@@ -44,6 +44,26 @@ cp config.env.example config.env
 python app.py
 ```
 
+### 3. **Custom App - On Behalf of Service Principal (Okta Service)** 🤖
+**Directory:** `custom-app-obo-sp-okta-service/`
+
+A Flask web application that authenticates as a service principal via Okta OAuth 2.0 Client Credentials flow and provides a SQL interface to Databricks.
+
+**Features:**
+- ✅ Service Principal Authentication (Client Credentials flow)
+- ✅ Machine-to-machine (M2M) authentication
+- ✅ No user interaction required
+- ✅ SQL query interface for Databricks
+- ✅ Automated workflows and batch processing
+
+**Quick Start:**
+```bash
+cd custom-app-obo-sp-okta-service
+cp config.env.example config.env
+# Edit config.env with your Okta service principal credentials
+python app.py
+```
+
 ## 📋 OAuth Flows Supported
 
 ### Authorization Code + PKCE (SPA)
@@ -70,6 +90,18 @@ User → Okta → Authorization Code → App (with secret) → Access Token → 
 - Preserves user identity in queries
 - Survives Okta web session logout
 
+### Client Credentials (Service Principal)
+
+```
+App → Okta → Access Token → Databricks (No user interaction)
+```
+
+**Benefits:**
+- No user interaction required
+- Ideal for automated workflows
+- Service principal permissions
+- Machine-to-machine authentication
+
 ## 🛠️ Prerequisites
 
 ### General Requirements
@@ -92,6 +124,13 @@ User → Okta → Authorization Code → App (with secret) → Access Token → 
 - **Redirect URIs**: `http://localhost:6001/callback`
 - **Scopes**: `openid`, `profile`, `email`, `all-apis`, `offline_access`
 - **Client Authentication**: Client Secret (Basic)
+
+#### For Service Principal (`custom-app-obo-sp-okta-service`)
+- **Application Type**: API Services (Service App)
+- **Grant Types**: Client Credentials
+- **Scopes**: `all-apis`
+- **Client Authentication**: Client Secret (Basic)
+- **No redirect URIs needed** (machine-to-machine)
 
 ### Databricks Configuration
 - SQL warehouse configured and running
@@ -142,7 +181,8 @@ Open `http://localhost:5000` in your browser and sign in with Okta.
 ```
 custom-app-oauth-databricks/
 ├── custom-app-obo-user-okta-spa/  # SPA User Authentication App
-├── custom-app-obo-user-okta-web/  # Web App User Authentication
+├── custom-app-obo-user-okta-web/  # Web App User Authentication  
+├── custom-app-obo-sp-okta-service/ # Service Principal Authentication
 │   ├── app.py                  # Main Flask application
 │   ├── config.env.example     # Configuration template
 │   ├── requirements.txt       # Python dependencies
