@@ -24,7 +24,29 @@ cp config.env.example config.env
 python app.py
 ```
 
-## 📋 OAuth Flow: Authorization Code + PKCE (SPA)
+### 2. **Custom App - On Behalf of User (Okta Web App)** 🌐
+**Directory:** `custom-app-obo-user-okta-web/`
+
+A Flask web application that authenticates users via Okta OAuth 2.0 with client secret + PKCE and provides a SQL interface to Databricks.
+
+**Features:**
+- ✅ User Authentication (OAuth 2.0 + Client Secret + PKCE)
+- ✅ Persistent refresh tokens (survive Okta session logout)
+- ✅ SQL query interface for Databricks
+- ✅ Enhanced security for web applications
+- ✅ Modern responsive UI
+
+**Quick Start:**
+```bash
+cd custom-app-obo-user-okta-web
+cp config.env.example config.env
+# Edit config.env with your Okta/Databricks settings
+python app.py
+```
+
+## 📋 OAuth Flows Supported
+
+### Authorization Code + PKCE (SPA)
 
 ```
 User → Okta → Authorization Code → App → Access Token → Databricks
@@ -36,6 +58,18 @@ User → Okta → Authorization Code → App → Access Token → Databricks
 - Preserves user identity in queries
 - Simple setup and configuration
 
+### Authorization Code + Client Secret + PKCE (Web App)
+
+```
+User → Okta → Authorization Code → App (with secret) → Access Token → Databricks
+```
+
+**Benefits:**
+- Persistent refresh tokens
+- Enhanced security with client secret + PKCE
+- Preserves user identity in queries
+- Survives Okta web session logout
+
 ## 🛠️ Prerequisites
 
 ### General Requirements
@@ -44,12 +78,20 @@ User → Okta → Authorization Code → App → Access Token → Databricks
 - Databricks workspace with SQL warehouse
 - Modern web browser
 
-### Okta SPA Configuration
-Configure your Okta application as:
+### Okta Configuration
+
+#### For SPA App (`custom-app-obo-user-okta-spa`)
 - **Application Type**: Single-Page App (SPA)
 - **Grant Types**: Authorization Code with PKCE
 - **Redirect URIs**: `http://localhost:5000/callback`
 - **Scopes**: `openid`, `profile`, `email`, `all-apis`, `offline_access`
+
+#### For Web App (`custom-app-obo-user-okta-web`)
+- **Application Type**: Web Application
+- **Grant Types**: Authorization Code with PKCE
+- **Redirect URIs**: `http://localhost:6001/callback`
+- **Scopes**: `openid`, `profile`, `email`, `all-apis`, `offline_access`
+- **Client Authentication**: Client Secret (Basic)
 
 ### Databricks Configuration
 - SQL warehouse configured and running
@@ -100,6 +142,7 @@ Open `http://localhost:5000` in your browser and sign in with Okta.
 ```
 custom-app-oauth-databricks/
 ├── custom-app-obo-user-okta-spa/  # SPA User Authentication App
+├── custom-app-obo-user-okta-web/  # Web App User Authentication
 │   ├── app.py                  # Main Flask application
 │   ├── config.env.example     # Configuration template
 │   ├── requirements.txt       # Python dependencies
