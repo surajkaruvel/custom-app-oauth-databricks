@@ -22,6 +22,8 @@ from datetime import datetime, timedelta
 from urllib.parse import urlencode
 import requests
 from flask import Flask, render_template, request, redirect, url_for, session, jsonify
+from openai import OpenAI
+import openai
 
 # Load environment variables from config.env if it exists
 def load_config_env():
@@ -75,6 +77,11 @@ class Config:
         # Databricks Configuration
         self.databricks_server_hostname = os.environ.get('DATABRICKS_SERVER_HOSTNAME', '')
         self.databricks_http_path = os.environ.get('DATABRICKS_HTTP_PATH', '')
+        
+        # Model Serving Configuration
+        self.model_serving_endpoint = os.environ.get('MODEL_SERVING_ENDPOINT', '')
+        self.model_name = os.environ.get('MODEL_NAME', 'databricks-gpt-oss-20b')
+        self.model_max_tokens = int(os.environ.get('MODEL_MAX_TOKENS', '256'))
         
         # Validate configuration
         if not self.issuer_url:
@@ -299,7 +306,7 @@ def execute_sql_query(query, warehouse_id):
 def check_token_validity():
     """Check token validity before each request to protected endpoints"""
     # Only check tokens for protected endpoints
-    protected_endpoints = ['sql_interface', 'execute_sql']
+    protected_endpoints = ['dashboard', 'sql_interface', 'execute_sql', 'chat_interface', 'send_message']
     
     if request.endpoint in protected_endpoints:
         # Check if user has tokens
@@ -315,19 +322,34 @@ def check_token_validity():
 
 @app.route('/')
 def index():
-    """Main page - login or SQL interface"""
+    """Main page - login or dashboard"""
     try:
         logger.info("Serving index page")
         
         # Check if user is authenticated
         if 'access_token' in session and 'workspace_token' in session:
-            return redirect(url_for('sql_interface'))
+            return redirect(url_for('databricks_interface'))
         
         return render_template('index.html')
         
     except Exception as e:
         logger.error(f"Error serving index page: {str(e)}")
         return f"Error: {str(e)}", 500
+
+@app.route('/databricks')
+def databricks_interface():
+    """Databricks interface selection page for authenticated users"""
+    if 'access_token' not in session or 'workspace_token' not in session:
+        return redirect(url_for('index'))
+    
+    workspace_url = f"https://{config.databricks_server_hostname}"
+    token_obtained = session.get('token_obtained')
+    
+    return render_template('databricks_interface.html',
+                         workspace_url=workspace_url,
+                         token_obtained=token_obtained,
+                         model_name=config.model_name,
+                         server_hostname=config.databricks_server_hostname)
 
 @app.route('/login')
 def login():
@@ -404,7 +426,7 @@ def callback():
         session.pop('code_verifier', None)
         
         logger.info("OAuth flow completed successfully (PKCE + Client Secret)")
-        return redirect(url_for('sql_interface'))
+        return redirect(url_for('databricks_interface'))
         
     except Exception as e:
         logger.error(f"Error processing OAuth callback: {str(e)}")
@@ -463,6 +485,156 @@ def execute_sql():
             'error': f"SQL execution failed: {str(e)}"
         }), 500
 
+def call_model_serving_endpoint(messages, temperature=0.7, max_tokens=None):
+    """Call Databricks model serving endpoint using OpenAI-compatible API"""
+    try:
+        # Get workspace token from session
+        workspace_token = session.get('workspace_token')
+        if not workspace_token:
+            raise Exception("No workspace token available")
+        
+        # Set max_tokens from config if not provided
+        if max_tokens is None:
+            max_tokens = config.model_max_tokens
+        
+        base_url = f"https://{config.databricks_server_hostname}/serving-endpoints"
+        logger.info(f"Calling model serving endpoint: {config.model_name} at {base_url}")
+        logger.info(f"Request parameters - temperature: {temperature}, max_tokens: {max_tokens}")
+        
+        # Use the workspace token as the API key for Databricks model serving
+        try:
+            # Explicitly initialize OpenAI client with only supported parameters
+            client = OpenAI(
+                api_key=workspace_token,
+                base_url=base_url,
+                timeout=30.0,
+                max_retries=2
+            )
+        except Exception as client_error:
+            logger.error(f"Failed to create OpenAI client: {str(client_error)}")
+            logger.error(f"OpenAI version: {OpenAI.__version__ if hasattr(OpenAI, '__version__') else 'unknown'}")
+            raise Exception(f"OpenAI client initialization failed: {str(client_error)}")
+        
+        try:
+            chat_completion = client.chat.completions.create(
+                messages=messages,
+                model=config.model_name,
+                max_tokens=max_tokens,
+                temperature=temperature
+            )
+        except Exception as api_error:
+            logger.error(f"Model serving API call failed: {str(api_error)}")
+            raise Exception(f"Model serving API error: {str(api_error)}")
+        
+        logger.info(f"Model serving call successful")
+        response_content = chat_completion.choices[0].message.content
+        logger.info(f"Response content type: {type(response_content)}")
+        logger.info(f"Response content: {response_content}")
+        
+        # Handle structured response from Databricks model
+        if isinstance(response_content, list):
+            # Look for the text content in the structured response
+            for item in response_content:
+                if isinstance(item, dict) and item.get('type') == 'text':
+                    return item.get('text', '')
+            # If no text type found, try to extract any text content
+            text_parts = []
+            for item in response_content:
+                if isinstance(item, dict):
+                    if 'text' in item:
+                        text_parts.append(item['text'])
+                    elif 'summary' in item and isinstance(item['summary'], list):
+                        for summary_item in item['summary']:
+                            if isinstance(summary_item, dict) and 'text' in summary_item:
+                                text_parts.append(summary_item['text'])
+            return '\n'.join(text_parts) if text_parts else str(response_content)
+        
+        return response_content
+        
+    except Exception as e:
+        logger.error(f"Model serving call failed: {str(e)}")
+        raise
+
+@app.route('/chat')
+def chat_interface():
+    """Chat interface with Databricks model"""
+    if 'access_token' not in session or 'workspace_token' not in session:
+        return redirect(url_for('index'))
+    
+    workspace_url = f"https://{config.databricks_server_hostname}"
+    token_obtained = session.get('token_obtained')
+    
+    return render_template('chat_interface.html',
+                         workspace_url=workspace_url,
+                         token_obtained=token_obtained,
+                         model_name=config.model_name,
+                         server_hostname=config.databricks_server_hostname)
+
+@app.route('/send-message', methods=['POST'])
+def send_message():
+    """Send message to the model and get response"""
+    try:
+        if 'workspace_token' not in session:
+            return jsonify({'error': 'Not authenticated'}), 401
+        
+        data = request.json
+        user_message = data.get('message', '').strip()
+        chat_history = data.get('history', [])
+        temperature = float(data.get('temperature', 0.7))
+        max_tokens = int(data.get('max_tokens', config.model_max_tokens))
+        
+        if not user_message:
+            return jsonify({'error': 'Missing message'}), 400
+        
+        # Build messages array for the model
+        messages = []
+        
+        # Add system message if this is the first message
+        if not chat_history:
+            messages.append({
+                "role": "system",
+                "content": "You are a helpful AI assistant. Provide clear, accurate, and helpful responses."
+            })
+        
+        # Add chat history
+        for msg in chat_history:
+            messages.append({
+                "role": msg.get('role', 'user'),
+                "content": msg.get('content', '')
+            })
+        
+        # Add current user message
+        messages.append({
+            "role": "user",
+            "content": user_message
+        })
+        
+        # Call the model
+        response_content = call_model_serving_endpoint(
+            messages=messages,
+            temperature=temperature,
+            max_tokens=max_tokens
+        )
+        
+        logger.info(f"Final response content type: {type(response_content)}")
+        logger.info(f"Final response content: {response_content}")
+        
+        return jsonify({
+            'success': True,
+            'response': response_content,
+            'timestamp': datetime.now().isoformat(),
+            'model': config.model_name,
+            'temperature': temperature,
+            'max_tokens': max_tokens
+        })
+        
+    except Exception as e:
+        logger.error(f"Chat message error: {str(e)}")
+        return jsonify({
+            'success': False,
+            'error': f"Chat failed: {str(e)}"
+        }), 500
+
 @app.route('/logout')
 def logout():
     """Clear session and logout"""
@@ -483,6 +655,32 @@ def health():
         'databricks_configured': bool(config.databricks_server_hostname),
         'app_type': 'Web Application (PKCE + Client Secret + Session-Independent Refresh Tokens)'
     })
+
+@app.route('/test-openai')
+def test_openai():
+    """Test OpenAI client initialization"""
+    try:
+        # Test basic OpenAI client creation
+        test_client = OpenAI(
+            api_key="test-key",
+            base_url="https://api.openai.com/v1",
+            timeout=30.0,
+            max_retries=2
+        )
+        
+        return jsonify({
+            'success': True,
+            'openai_version': openai.__version__,
+            'client_created': True,
+            'message': 'OpenAI client can be initialized successfully'
+        })
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e),
+            'openai_version': openai.__version__ if hasattr(openai, '__version__') else 'unknown',
+            'message': 'OpenAI client initialization failed'
+        }), 500
 
 @app.route('/token-status')
 def token_status():

@@ -39,7 +39,20 @@
                         User Account
                     </a>
                     <ul class="dropdown-menu dropdown-menu-end">
-                        <li><h6 class="dropdown-header">Authentication Status</h6></li>
+                        <li><h6 class="dropdown-header">Navigation</h6></li>
+                        <li><a class="dropdown-item" href="{{ url_for('databricks_interface') }}">
+                            <i class="fas fa-cube me-1"></i>
+                            Databricks Home
+                        </a></li>
+                        <li><a class="dropdown-item" href="{{ url_for('sql_interface') }}">
+                            <i class="fas fa-database me-1"></i>
+                            SQL Interface
+                        </a></li>
+                        <li><a class="dropdown-item" href="{{ url_for('chat_interface') }}">
+                            <i class="fas fa-robot me-1"></i>
+                            Chat Interface
+                        </a></li>
+                        <li><hr class="dropdown-divider"></li>
                         <li><span class="dropdown-item-text">
                             <i class="fas fa-check-circle text-success me-1"></i>
                             Authenticated

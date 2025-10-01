@@ -57,20 +57,34 @@
             </button>
             <div class="collapse navbar-collapse" id="navbarNav">
                 <ul class="navbar-nav ms-auto">
-                    <li class="nav-item">
-                        <a class="nav-link" href="{{ url_for('index') }}">
-                            <i class="fas fa-home me-1"></i>Home
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button" data-bs-toggle="dropdown">
+                            <i class="fas fa-cog me-1"></i>Service Principal
                         </a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="{{ url_for('sql_interface') }}">
-                            <i class="fas fa-database me-1"></i>SQL Interface
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="{{ url_for('health') }}" target="_blank">
-                            <i class="fas fa-heartbeat me-1"></i>Health
-                        </a>
+                        <ul class="dropdown-menu dropdown-menu-end">
+                            <li><h6 class="dropdown-header">Navigation</h6></li>
+                            <li><a class="dropdown-item" href="{{ url_for('dashboard') }}">
+                                <i class="fas fa-tachometer-alt me-1"></i>Dashboard
+                            </a></li>
+                            <li><a class="dropdown-item" href="{{ url_for('sql_interface') }}">
+                                <i class="fas fa-database me-1"></i>SQL Interface
+                            </a></li>
+                            <li><a class="dropdown-item" href="{{ url_for('chat_interface') }}">
+                                <i class="fas fa-robot me-1"></i>Chat Interface
+                            </a></li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li><span class="dropdown-item-text">
+                                <i class="fas fa-check-circle text-success me-1"></i>
+                                Service Principal Active
+                            </span></li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li><a class="dropdown-item" href="{{ url_for('health') }}" target="_blank">
+                                <i class="fas fa-heartbeat me-1"></i>Health Check
+                            </a></li>
+                            <li><a class="dropdown-item" href="{{ url_for('test_openai') }}" target="_blank">
+                                <i class="fas fa-vial me-1"></i>Test OpenAI
+                            </a></li>
+                        </ul>
                     </li>
                 </ul>
             </div>

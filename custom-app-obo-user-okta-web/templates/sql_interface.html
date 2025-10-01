@@ -48,15 +48,40 @@
                 <i class="fas fa-database me-2"></i>
                 Databricks SQL Interface
             </a>
-            <div class="d-flex align-items-center gap-3">
-                <div class="webapp-indicator">
-                    <i class="fas fa-server me-1"></i>
-                    Web App (Session-Independent)
+            <div class="navbar-nav ms-auto">
+                <div class="nav-item dropdown">
+                    <a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button" data-bs-toggle="dropdown">
+                        <i class="fas fa-user me-1"></i>
+                        Web App User
+                    </a>
+                    <ul class="dropdown-menu dropdown-menu-end">
+                        <li><h6 class="dropdown-header">Navigation</h6></li>
+                        <li><a class="dropdown-item" href="{{ url_for('databricks_interface') }}">
+                            <i class="fas fa-cube me-1"></i>
+                            Databricks Home
+                        </a></li>
+                        <li><a class="dropdown-item" href="{{ url_for('sql_interface') }}">
+                            <i class="fas fa-database me-1"></i>
+                            SQL Interface
+                        </a></li>
+                        <li><a class="dropdown-item" href="{{ url_for('chat_interface') }}">
+                            <i class="fas fa-robot me-1"></i>
+                            Chat Interface
+                        </a></li>
+                        <li><hr class="dropdown-divider"></li>
+                        <li><span class="dropdown-item-text">
+                            <div class="webapp-indicator">
+                                <i class="fas fa-server me-1"></i>
+                                Web App (Session-Independent)
+                            </div>
+                        </span></li>
+                        <li><hr class="dropdown-divider"></li>
+                        <li><a class="dropdown-item" href="{{ url_for('logout') }}">
+                            <i class="fas fa-sign-out-alt me-1"></i>
+                            Logout
+                        </a></li>
+                    </ul>
                 </div>
-                <a href="{{ url_for('logout') }}" class="btn btn-outline-light btn-sm">
-                    <i class="fas fa-sign-out-alt me-1"></i>
-                    Logout
-                </a>
             </div>
         </div>
     </nav>

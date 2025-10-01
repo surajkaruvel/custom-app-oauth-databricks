@@ -1,0 +1,360 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Databricks Interface - Choose Your Tool</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        :root {
+            --databricks-red: #FF3621;
+            --databricks-dark: #1B1B1B;
+            --databricks-gray: #F5F5F5;
+            --databricks-blue: #0066CC;
+        }
+        
+        body {
+            background: linear-gradient(135deg, #1B1B1B 0%, #2D2D2D 100%);
+            min-height: 100vh;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        .databricks-header {
+            background: var(--databricks-dark);
+            border-bottom: 3px solid var(--databricks-red);
+            padding: 1rem 0;
+        }
+        
+        .databricks-logo {
+            color: white;
+            font-size: 1.5rem;
+            font-weight: 700;
+            text-decoration: none;
+        }
+        
+        .databricks-logo:hover {
+            color: var(--databricks-red);
+            text-decoration: none;
+        }
+        
+        .main-container {
+            padding: 4rem 0;
+            color: white;
+        }
+        
+        .welcome-section {
+            text-align: center;
+            margin-bottom: 4rem;
+        }
+        
+        .welcome-title {
+            font-size: 3rem;
+            font-weight: 700;
+            margin-bottom: 1rem;
+            background: linear-gradient(135deg, var(--databricks-red) 0%, #FF6B47 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        
+        .welcome-subtitle {
+            font-size: 1.2rem;
+            color: #CCCCCC;
+            margin-bottom: 2rem;
+        }
+        
+        .interface-card {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 16px;
+            padding: 3rem 2rem;
+            text-align: center;
+            transition: all 0.3s ease;
+            backdrop-filter: blur(10px);
+            height: 100%;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .interface-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, var(--databricks-red) 0%, #FF6B47 100%);
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+        
+        .interface-card:hover {
+            transform: translateY(-8px);
+            border-color: var(--databricks-red);
+            box-shadow: 0 20px 40px rgba(255, 54, 33, 0.2);
+        }
+        
+        .interface-card:hover::before {
+            opacity: 1;
+        }
+        
+        .interface-icon {
+            font-size: 4rem;
+            margin-bottom: 1.5rem;
+            background: linear-gradient(135deg, var(--databricks-red) 0%, #FF6B47 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        
+        .interface-title {
+            font-size: 1.8rem;
+            font-weight: 600;
+            margin-bottom: 1rem;
+            color: white;
+        }
+        
+        .interface-description {
+            color: #CCCCCC;
+            margin-bottom: 2rem;
+            line-height: 1.6;
+        }
+        
+        .interface-features {
+            list-style: none;
+            padding: 0;
+            margin-bottom: 2rem;
+        }
+        
+        .interface-features li {
+            color: #AAAAAA;
+            margin-bottom: 0.5rem;
+            font-size: 0.9rem;
+        }
+        
+        .interface-features li i {
+            color: var(--databricks-red);
+            margin-right: 0.5rem;
+        }
+        
+        .interface-btn {
+            background: linear-gradient(135deg, var(--databricks-red) 0%, #FF6B47 100%);
+            border: none;
+            color: white;
+            padding: 1rem 2rem;
+            border-radius: 8px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            display: inline-block;
+        }
+        
+        .interface-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(255, 54, 33, 0.3);
+            color: white;
+            text-decoration: none;
+        }
+        
+        .user-info {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin-bottom: 2rem;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        .user-info h5 {
+            color: var(--databricks-red);
+            margin-bottom: 1rem;
+        }
+        
+        .info-item {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 0.5rem;
+            font-size: 0.9rem;
+        }
+        
+        .info-label {
+            color: #AAAAAA;
+        }
+        
+        .info-value {
+            color: white;
+            font-weight: 500;
+        }
+        
+        .auth-badge {
+            background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+            color: white;
+            padding: 0.3rem 0.8rem;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 600;
+        }
+        
+        .logout-btn {
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            color: white;
+            padding: 0.5rem 1rem;
+            border-radius: 6px;
+            text-decoration: none;
+            font-size: 0.9rem;
+            transition: all 0.3s ease;
+        }
+        
+        .logout-btn:hover {
+            background: rgba(255, 54, 33, 0.2);
+            border-color: var(--databricks-red);
+            color: white;
+            text-decoration: none;
+        }
+        
+        .footer-info {
+            text-align: center;
+            margin-top: 4rem;
+            padding-top: 2rem;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+            color: #888888;
+            font-size: 0.9rem;
+        }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <header class="databricks-header">
+        <div class="container">
+            <div class="d-flex justify-content-between align-items-center">
+                <a href="#" class="databricks-logo">
+                    <i class="fas fa-cube me-2"></i>
+                    Databricks
+                </a>
+                <div class="d-flex align-items-center gap-3">
+                    <span class="auth-badge">
+                        <i class="fas fa-check-circle me-1"></i>
+                        Authenticated
+                    </span>
+                    <a href="{{ url_for('logout') }}" class="logout-btn">
+                        <i class="fas fa-sign-out-alt me-1"></i>
+                        Logout
+                    </a>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <div class="main-container">
+        <div class="container">
+            <!-- Welcome Section -->
+            <div class="welcome-section">
+                <h1 class="welcome-title">Welcome to Databricks</h1>
+                <p class="welcome-subtitle">
+                    Choose your interface to start working with data and AI
+                </p>
+            </div>
+
+            <!-- User Info -->
+            <div class="row justify-content-center mb-4">
+                <div class="col-md-8">
+                    <div class="user-info">
+                        <h5><i class="fas fa-user-circle me-2"></i>Session Information</h5>
+                        <div class="info-item">
+                            <span class="info-label">Workspace:</span>
+                            <span class="info-value">{{ workspace_url }}</span>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-label">Server:</span>
+                            <span class="info-value">{{ server_hostname }}</span>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-label">Authentication:</span>
+                            <span class="info-value">SPA + PKCE</span>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-label">Authenticated:</span>
+                            <span class="info-value">{{ token_obtained }}</span>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-label">Model Available:</span>
+                            <span class="info-value">{{ model_name }}</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Interface Selection -->
+            <div class="row g-4">
+                <!-- SQL Interface -->
+                <div class="col-lg-6">
+                    <div class="interface-card">
+                        <div class="interface-icon">
+                            <i class="fas fa-database"></i>
+                        </div>
+                        <h3 class="interface-title">SQL Analytics</h3>
+                        <p class="interface-description">
+                            Execute SQL queries against your data warehouse. Analyze data, create reports, 
+                            and explore your datasets with our powerful SQL interface.
+                        </p>
+                        <ul class="interface-features">
+                            <li><i class="fas fa-check"></i> Interactive SQL Editor</li>
+                            <li><i class="fas fa-check"></i> Real-time Query Results</li>
+                            <li><i class="fas fa-check"></i> Data Visualization</li>
+                            <li><i class="fas fa-check"></i> Export Capabilities</li>
+                            <li><i class="fas fa-check"></i> Query History</li>
+                        </ul>
+                        <a href="{{ url_for('sql_interface') }}" class="interface-btn">
+                            <i class="fas fa-play me-2"></i>
+                            Launch SQL Interface
+                        </a>
+                    </div>
+                </div>
+
+                <!-- Chat Interface -->
+                <div class="col-lg-6">
+                    <div class="interface-card">
+                        <div class="interface-icon">
+                            <i class="fas fa-robot"></i>
+                        </div>
+                        <h3 class="interface-title">AI Assistant</h3>
+                        <p class="interface-description">
+                            Interact with Databricks AI models through natural language. Get insights, 
+                            generate code, and explore possibilities with our intelligent assistant.
+                        </p>
+                        <ul class="interface-features">
+                            <li><i class="fas fa-check"></i> Natural Language Processing</li>
+                            <li><i class="fas fa-check"></i> Code Generation & Analysis</li>
+                            <li><i class="fas fa-check"></i> Data Insights & Explanations</li>
+                            <li><i class="fas fa-check"></i> Conversation History</li>
+                            <li><i class="fas fa-check"></i> Adjustable Parameters</li>
+                        </ul>
+                        <a href="{{ url_for('chat_interface') }}" class="interface-btn">
+                            <i class="fas fa-comments me-2"></i>
+                            Launch AI Assistant
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Footer Info -->
+            <div class="footer-info">
+                <p>
+                    <i class="fas fa-shield-alt me-2"></i>
+                    Secure OAuth 2.0 Authentication with PKCE
+                </p>
+                <p>
+                    <i class="fas fa-cube me-2"></i>
+                    Powered by Databricks Lakehouse Platform
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
