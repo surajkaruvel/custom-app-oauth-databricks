@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Databricks OAuth - Entra ID{% endblock %}</title>
+    
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Font Awesome -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    
+    <style>
+        :root {
+            --entra-blue: #0078d4;
+            --entra-dark-blue: #106ebe;
+            --databricks-orange: #ff6b35;
+            --databricks-dark-orange: #e55a2b;
+        }
+        
+        .navbar-brand {
+            font-weight: 600;
+        }
+        
+        .btn-entra {
+            background: linear-gradient(135deg, var(--entra-blue) 0%, var(--entra-dark-blue) 100%);
+            border: none;
+            color: white;
+        }
+        
+        .btn-entra:hover {
+            background: linear-gradient(135deg, var(--entra-dark-blue) 0%, var(--entra-blue) 100%);
+            color: white;
+        }
+        
+        .btn-databricks {
+            background: linear-gradient(135deg, var(--databricks-orange) 0%, var(--databricks-dark-orange) 100%);
+            border: none;
+            color: white;
+        }
+        
+        .btn-databricks:hover {
+            background: linear-gradient(135deg, var(--databricks-dark-orange) 0%, var(--databricks-orange) 100%);
+            color: white;
+        }
+        
+        .entra-badge {
+            background: var(--entra-blue);
+            color: white;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 0.9rem;
+            font-weight: 600;
+        }
+        
+        .hero-section {
+            background: linear-gradient(135deg, var(--entra-blue) 0%, var(--databricks-orange) 100%);
+            color: white;
+            padding: 3rem 0;
+        }
+        
+        .card {
+            border: none;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            transition: transform 0.3s ease;
+        }
+        
+        .card:hover {
+            transform: translateY(-2px);
+        }
+        
+        .step-indicator {
+            display: flex;
+            justify-content: center;
+            margin-bottom: 2rem;
+        }
+        
+        .step {
+            padding: 0.5rem 1rem;
+            margin: 0 0.5rem;
+            border-radius: 20px;
+            font-size: 0.9rem;
+            font-weight: 600;
+        }
+        
+        .step.active {
+            background: var(--entra-blue);
+            color: white;
+        }
+        
+        .step.completed {
+            background: #28a745;
+            color: white;
+        }
+        
+        .step.pending {
+            background: #e9ecef;
+            color: #6c757d;
+        }
+        
+        {% block styles %}{% endblock %}
+    </style>
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+        <div class="container">
+            <a class="navbar-brand" href="{{ url_for('index') }}">
+                <i class="fab fa-microsoft me-2"></i>
+                Databricks OAuth - Entra ID
+            </a>
+            <div class="entra-badge">
+                <i class="fas fa-shield-alt me-1"></i>
+                Microsoft Entra ID
+            </div>
+        </div>
+    </nav>
+
+    <!-- Flash Messages -->
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            <div class="container mt-3">
+                {% for category, message in messages %}
+                    <div class="alert alert-{{ 'danger' if category == 'error' else 'success' if category == 'success' else 'info' }} alert-dismissible fade show" role="alert">
+                        <i class="fas fa-{{ 'exclamation-triangle' if category == 'error' else 'check-circle' if category == 'success' else 'info-circle' }} me-2"></i>
+                        {{ message }}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    </div>
+                {% endfor %}
+            </div>
+        {% endif %}
+    {% endwith %}
+
+    <!-- Main Content -->
+    <main class="container-fluid">
+        {% block content %}{% endblock %}
+    </main>
+
+    <!-- Footer -->
+    <footer class="bg-light mt-5 py-4">
+        <div class="container text-center">
+            <div class="row">
+                <div class="col-md-6">
+                    <p class="text-muted mb-0">
+                        <i class="fab fa-microsoft me-1"></i>
+                        Powered by Microsoft Entra ID
+                    </p>
+                </div>
+                <div class="col-md-6">
+                    <p class="text-muted mb-0">
+                        <i class="fas fa-cube me-1"></i>
+                        Integrated with Databricks
+                    </p>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <!-- Copy to Clipboard Function -->
+    <script>
+        function copyToClipboard(text, buttonId) {
+            navigator.clipboard.writeText(text).then(function() {
+                const button = document.getElementById(buttonId);
+                const originalText = button.innerHTML;
+                button.innerHTML = '<i class="fas fa-check me-1"></i>Copied!';
+                button.classList.remove('btn-outline-primary');
+                button.classList.add('btn-success');
+                
+                setTimeout(function() {
+                    button.innerHTML = originalText;
+                    button.classList.remove('btn-success');
+                    button.classList.add('btn-outline-primary');
+                }, 2000);
+            }).catch(function(err) {
+                console.error('Could not copy text: ', err);
+                alert('Failed to copy to clipboard');
+            });
+        }
+    </script>
+    
+    {% block scripts %}{% endblock %}
+</body>
+</html>
+

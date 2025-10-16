@@ -1,0 +1,248 @@
+{% extends "base.html" %}
+
+{% block title %}Login - Databricks OAuth with Entra ID{% endblock %}
+
+{% block content %}
+<div class="hero-section">
+    <div class="container text-center">
+        <div class="row justify-content-center">
+            <div class="col-lg-8">
+                <h1 class="display-4 fw-bold mb-4">
+                    <i class="fab fa-microsoft me-3"></i>
+                    Databricks OAuth with Entra ID
+                </h1>
+                <p class="lead mb-4">
+                    Secure authentication using Microsoft Entra ID (Azure AD) with PKCE. 
+                    Access Databricks SQL Analytics and AI Assistant with enterprise-grade security.
+                </p>
+                <div class="d-flex justify-content-center gap-3 mb-4">
+                    <span class="badge bg-light text-dark fs-6 px-3 py-2">
+                        <i class="fab fa-microsoft me-1"></i>
+                        Entra ID Authentication
+                    </span>
+                    <span class="badge bg-light text-dark fs-6 px-3 py-2">
+                        <i class="fas fa-shield-alt me-1"></i>
+                        PKCE Security
+                    </span>
+                    <span class="badge bg-light text-dark fs-6 px-3 py-2">
+                        <i class="fas fa-sync-alt me-1"></i>
+                        Auto Token Refresh
+                    </span>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="container my-5">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <!-- Step Indicator -->
+            <div class="step-indicator">
+                <div class="step active">
+                    <i class="fas fa-cog me-1"></i>
+                    Configure
+                </div>
+                <div class="step pending">
+                    <i class="fab fa-microsoft me-1"></i>
+                    Authenticate
+                </div>
+                <div class="step pending">
+                    <i class="fas fa-exchange-alt me-1"></i>
+                    Exchange
+                </div>
+                <div class="step pending">
+                    <i class="fas fa-rocket me-1"></i>
+                    Launch
+                </div>
+            </div>
+
+            <!-- Main Configuration Card -->
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h4 class="mb-0">
+                        <i class="fas fa-rocket me-2"></i>
+                        Databricks Workspace Configuration
+                    </h4>
+                </div>
+                <div class="card-body">
+                    <p class="text-muted mb-4">
+                        Enter your Databricks workspace URL to begin the authentication process. 
+                        You'll be redirected to Microsoft Entra ID for secure authentication.
+                    </p>
+
+                    <!-- Configuration Info -->
+                    <div class="row mb-4">
+                        <div class="col-md-6">
+                            <div class="card bg-light">
+                                <div class="card-body">
+                                    <h6 class="card-title">
+                                        <i class="fab fa-microsoft me-1"></i>
+                                        Entra ID Configuration
+                                    </h6>
+                                    <small class="text-muted">
+                                        <strong>Tenant ID:</strong> {{ config.tenant_id or 'Not configured' }}<br>
+                                        <strong>Client ID:</strong> {{ config.client_id or 'Not configured' }}<br>
+                                        <strong>Client Type:</strong> {{ 'Public (U2M)' if config.is_public_client else 'Confidential' }}<br>
+                                        <strong>Redirect URI:</strong> {{ config.redirect_uri }}
+                                    </small>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="card bg-light">
+                                <div class="card-body">
+                                    <h6 class="card-title">
+                                        <i class="fas fa-shield-alt me-1"></i>
+                                        Security Features
+                                    </h6>
+                                    <small class="text-muted">
+                                        • PKCE (Proof Key for Code Exchange)<br>
+                                        • Public client (no secrets stored)<br>
+                                        • User-to-Machine (U2M) authentication<br>
+                                        • Automatic token refresh<br>
+                                        • Session-based state management
+                                    </small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Workspace URL Form -->
+                    <form method="POST" action="{{ url_for('login') }}">
+                        <div class="mb-3">
+                            <label for="workspace_url" class="form-label">
+                                <i class="fas fa-cloud me-1"></i>
+                                <strong>Databricks Workspace URL</strong>
+                            </label>
+                            <input 
+                                type="url" 
+                                class="form-control form-control-lg" 
+                                id="workspace_url" 
+                                name="workspace_url" 
+                                placeholder="https://adb-1234567890123456.7.azuredatabricks.net"
+                                required
+                                pattern="https?://.*"
+                                title="Please enter a valid URL starting with http:// or https://"
+                            >
+                            <div class="form-text">
+                                <i class="fas fa-info-circle me-1"></i>
+                                Enter the full URL of your Azure Databricks workspace (including https://)
+                            </div>
+                        </div>
+
+                        <div class="d-grid">
+                            <button type="submit" class="btn btn-entra btn-lg">
+                                <i class="fab fa-microsoft me-2"></i>
+                                Start Entra ID Authentication
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Authentication Flow Info -->
+            <div class="card mt-4">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-info-circle me-2"></i>
+                        Authentication Flow
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h6><i class="fas fa-list-ol me-1"></i> Process Steps:</h6>
+                            <ol class="small">
+                                <li>Enter your Databricks workspace URL</li>
+                                <li>Click "Start Entra ID Authentication"</li>
+                                <li>Authenticate with Microsoft Entra ID</li>
+                                <li>Entra ID token exchanged for Databricks token</li>
+                                <li>Choose SQL Analytics or AI Assistant interface</li>
+                                <li>Start querying data or chatting with AI models</li>
+                            </ol>
+                        </div>
+                        <div class="col-md-6">
+                            <h6><i class="fas fa-shield-alt me-1"></i> Security Benefits:</h6>
+                            <ul class="small">
+                                <li><strong>Enterprise SSO:</strong> Use your organization's identity</li>
+                                <li><strong>PKCE Security:</strong> Enhanced protection for OAuth flows</li>
+                                <li><strong>Token Refresh:</strong> Automatic session management</li>
+                                <li><strong>Conditional Access:</strong> Leverage Entra ID policies</li>
+                                <li><strong>MFA Support:</strong> Multi-factor authentication ready</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Comparison with Other Methods -->
+            <div class="card mt-4">
+                <div class="card-header">
+                    <h6 class="mb-0">
+                        <i class="fas fa-balance-scale me-2"></i>
+                        Why Entra ID OAuth?
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div class="row g-3">
+                        <div class="col-md-4">
+                            <div class="text-center">
+                                <div class="bg-success text-white rounded-circle d-inline-flex align-items-center justify-content-center" style="width: 50px; height: 50px;">
+                                    <i class="fab fa-microsoft"></i>
+                                </div>
+                                <h6 class="mt-2">Enterprise Integration</h6>
+                                <small class="text-muted">Seamless integration with your organization's identity provider</small>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="text-center">
+                                <div class="bg-primary text-white rounded-circle d-inline-flex align-items-center justify-content-center" style="width: 50px; height: 50px;">
+                                    <i class="fas fa-shield-alt"></i>
+                                </div>
+                                <h6 class="mt-2">Enhanced Security</h6>
+                                <small class="text-muted">PKCE, conditional access, and MFA support</small>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="text-center">
+                                <div class="bg-info text-white rounded-circle d-inline-flex align-items-center justify-content-center" style="width: 50px; height: 50px;">
+                                    <i class="fas fa-users"></i>
+                                </div>
+                                <h6 class="mt-2">User Experience</h6>
+                                <small class="text-muted">Single sign-on with familiar Microsoft login</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // Auto-fill workspace URL from URL parameter if provided
+    const urlParams = new URLSearchParams(window.location.search);
+    const workspaceUrl = urlParams.get('workspace_url');
+    if (workspaceUrl) {
+        document.getElementById('workspace_url').value = workspaceUrl;
+    }
+
+    // Form validation
+    document.querySelector('form').addEventListener('submit', function(e) {
+        const workspaceUrl = document.getElementById('workspace_url').value;
+        if (!workspaceUrl.match(/^https?:\/\/.+/)) {
+            e.preventDefault();
+            alert('Please enter a valid workspace URL starting with http:// or https://');
+            return false;
+        }
+        
+        // Show loading state
+        const button = this.querySelector('button[type="submit"]');
+        button.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Redirecting to Entra ID...';
+        button.disabled = true;
+    });
+</script>
+{% endblock %}

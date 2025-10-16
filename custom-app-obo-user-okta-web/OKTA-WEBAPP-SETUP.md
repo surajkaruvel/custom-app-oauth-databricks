@@ -68,7 +68,7 @@ ISSUER_URL=https://integrator-9643557.okta.com/oauth2/ausvfdqujxnd7xdnj697
 CLIENT_ID=YOUR_NEW_WEB_APP_CLIENT_ID_HERE
 CLIENT_SECRET=YOUR_NEW_WEB_APP_CLIENT_SECRET_HERE
 REDIRECT_URI=http://localhost:6000/callback
-OAUTH_SCOPE=openid profile email all-apis offline_access
+OAUTH_SCOPE=openid profile email offline_access
 
 # Databricks SQL Endpoint Configuration
 DATABRICKS_SERVER_HOSTNAME=dbc-c91403c4-666c.cloud.databricks.com

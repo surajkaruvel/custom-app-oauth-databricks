@@ -72,7 +72,7 @@ class Config:
         self.client_id = os.environ.get('CLIENT_ID', '')
         self.client_secret = os.environ.get('CLIENT_SECRET', '')  # Required for Web Apps
         self.redirect_uri = os.environ.get('REDIRECT_URI', 'http://localhost:6000/callback')
-        self.oauth_scope = os.environ.get('OAUTH_SCOPE', 'openid profile email all-apis offline_access')
+        self.oauth_scope = os.environ.get('OAUTH_SCOPE', 'openid profile email offline_access')
         
         # Databricks Configuration
         self.databricks_server_hostname = os.environ.get('DATABRICKS_SERVER_HOSTNAME', '')

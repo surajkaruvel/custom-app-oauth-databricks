@@ -1,0 +1,129 @@
+{% extends "base.html" %}
+
+{% block title %}SQL Interface - Databricks OAuth{% endblock %}
+
+{% block content %}
+<div class="container my-4">
+    <div class="row justify-content-center">
+        <div class="col-lg-10">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h4 class="mb-0">
+                        <i class="fas fa-database me-2"></i>
+                        SQL Analytics Interface
+                    </h4>
+                </div>
+                <div class="card-body">
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <strong><i class="fas fa-cloud me-1"></i> Workspace:</strong><br>
+                            <code>{{ workspace_url }}</code>
+                        </div>
+                        <div class="col-md-6">
+                            <strong><i class="fas fa-warehouse me-1"></i> SQL Warehouse ID:</strong><br>
+                            <code>{{ warehouse_id }}</code>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="sql-query" class="form-label"><strong>SQL Query:</strong></label>
+                        <textarea class="form-control" id="sql-query" rows="5" placeholder="SELECT * FROM samples.nyctaxi.trips LIMIT 10;"></textarea>
+                    </div>
+                    <button id="execute-sql-btn" class="btn btn-primary">
+                        <i class="fas fa-play me-1"></i> Execute Query
+                    </button>
+
+                    <div class="mt-4">
+                        <h5>Results:</h5>
+                        <div id="sql-results" class="bg-light p-3 rounded" style="max-height: 400px; overflow-y: auto;">
+                            <p class="text-muted">Results will appear here...</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="text-center mt-3">
+                <a href="{{ url_for('databricks_interface') }}" class="btn btn-outline-secondary">
+                    <i class="fas fa-arrow-left me-1"></i>
+                    Back to Interface Selection
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.getElementById('execute-sql-btn').addEventListener('click', async function() {
+        const query = document.getElementById('sql-query').value;
+        const resultsDiv = document.getElementById('sql-results');
+        const executeBtn = this;
+
+        if (!query) {
+            resultsDiv.innerHTML = '<div class="alert alert-warning">Please enter a SQL query.</div>';
+            return;
+        }
+
+        executeBtn.disabled = true;
+        executeBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i> Executing...';
+        resultsDiv.innerHTML = '<p class="text-muted">Executing query...</p>';
+
+        try {
+            const response = await fetch('{{ url_for("execute_sql") }}', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ query: query })
+            });
+
+            let data;
+            try {
+                data = await response.json();
+            } catch (parseError) {
+                throw new Error('Failed to parse server response');
+            }
+
+            // Check for errors at different levels
+            if (!response.ok) {
+                const errorMsg = data?.error || data?.result?.error || `HTTP ${response.status}: ${response.statusText}`;
+                resultsDiv.innerHTML = `<div class="alert alert-danger">Error: ${errorMsg}</div>`;
+                return;
+            }
+
+            if (data.result && data.result.success) {
+                let tableHtml = '<table class="table table-sm table-bordered table-striped"><thead><tr>';
+                data.result.columns.forEach(col => {
+                    tableHtml += `<th>${col}</th>`;
+                });
+                tableHtml += '</tr></thead><tbody>';
+                data.result.rows.forEach(row => {
+                    tableHtml += '<tr>';
+                    row.forEach(cell => {
+                        tableHtml += `<td>${cell !== null ? cell : '<em>null</em>'}</td>`;
+                    });
+                    tableHtml += '</tr>';
+                });
+                tableHtml += '</tbody></table>';
+                resultsDiv.innerHTML = `
+                    <div class="alert alert-success">
+                        Query executed successfully! (${data.result.row_count} rows, ${data.result.execution_time} ms)
+                    </div>
+                    ${tableHtml}
+                `;
+            } else {
+                // Handle error cases
+                const errorMsg = data?.result?.error || data?.error || 'Unknown error occurred';
+                resultsDiv.innerHTML = `<div class="alert alert-danger">Error: ${errorMsg}</div>`;
+            }
+        } catch (error) {
+            resultsDiv.innerHTML = `<div class="alert alert-danger">Network error: ${error.message}</div>`;
+        } finally {
+            executeBtn.disabled = false;
+            executeBtn.innerHTML = '<i class="fas fa-play me-1"></i> Execute Query';
+        }
+    });
+</script>
+{% endblock %}
+

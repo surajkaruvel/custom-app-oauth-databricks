@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
-User Authentication OAuth App with PKCE
-Authenticates users via Okta SPA and executes SQL queries on their behalf
+Databricks Direct OAuth App - Public Client
+Authenticates directly with Databricks OAuth endpoints using PKCE (no client secret)
 """
 
 import os
@@ -13,8 +13,6 @@ import base64
 from datetime import datetime, timedelta
 from urllib.parse import urlencode, parse_qs
 from flask import Flask, render_template, request, jsonify, redirect, url_for, session
-from openai import OpenAI
-import openai
 
 # Load environment variables from config.env if it exists
 def load_config_env():
@@ -45,7 +43,7 @@ logger = logging.getLogger(__name__)
 
 # Flask app configuration
 app = Flask(__name__)
-app.secret_key = os.environ.get('FLASK_SECRET_KEY', 'user-auth-oauth-app-secret')
+app.secret_key = os.environ.get('FLASK_SECRET_KEY', 'databricks-public-oauth-app-secret')
 
 # Security: Configure secure session settings
 app.config.update(
@@ -58,29 +56,24 @@ app.config.update(
 # Configuration
 class Config:
     def __init__(self):
-        # Okta SPA Configuration
-        self.issuer_url = os.environ.get('ISSUER_URL', '')
+        # Databricks OAuth Configuration
+        self.databricks_server_hostname = os.environ.get('DATABRICKS_SERVER_HOSTNAME', '')
         self.client_id = os.environ.get('CLIENT_ID', '')
-        self.redirect_uri = os.environ.get('REDIRECT_URI', 'http://localhost:5000/callback')
-        self.scope = os.environ.get('OAUTH_SCOPE', 'openid profile email offline_access')
+        # Note: No client_secret for public client
+        self.redirect_uri = os.environ.get('REDIRECT_URI', 'http://localhost:8003/callback')
+        self.scope = os.environ.get('OAUTH_SCOPE', 'all-apis offline_access')
         
         # Databricks SQL Endpoint Configuration
-        self.databricks_server_hostname = os.environ.get('DATABRICKS_SERVER_HOSTNAME', '')
         self.databricks_http_path = os.environ.get('DATABRICKS_HTTP_PATH', '')
         
-        # Model Serving Configuration
-        self.model_serving_endpoint = os.environ.get('MODEL_SERVING_ENDPOINT', '')
-        self.model_name = os.environ.get('MODEL_NAME', 'databricks-gpt-oss-20b')
-        self.model_max_tokens = int(os.environ.get('MODEL_MAX_TOKENS', '256'))
-        
         # Validate required configuration
-        if not self.issuer_url:
-            logger.warning("Okta issuer URL not configured")
+        if not self.databricks_server_hostname:
+            logger.warning("Databricks server hostname not configured")
         
         if not self.client_id:
-            logger.warning("Okta client ID not configured")
+            logger.warning("Databricks client ID not configured")
         
-        if not all([self.databricks_server_hostname, self.databricks_http_path]):
+        if not self.databricks_http_path:
             logger.warning("Databricks SQL endpoint not fully configured")
 
 config = Config()
@@ -98,18 +91,20 @@ def generate_pkce_pair():
     return code_verifier, code_challenge
 
 def exchange_code_for_token(authorization_code, code_verifier):
-    """Exchange authorization code for tokens using PKCE"""
+    """Exchange authorization code for tokens using PKCE only (Public Client)"""
     token_data = {
         'grant_type': 'authorization_code',
         'client_id': config.client_id,
+        # Note: No client_secret for public client
         'code': authorization_code,
         'redirect_uri': config.redirect_uri,
         'code_verifier': code_verifier
     }
     
     try:
+        token_url = f"https://{config.databricks_server_hostname}/oidc/v1/token"
         response = requests.post(
-            f"{config.issuer_url}/v1/token",
+            token_url,
             data=token_data,
             headers={'Content-Type': 'application/x-www-form-urlencoded'},
             timeout=30
@@ -118,34 +113,16 @@ def exchange_code_for_token(authorization_code, code_verifier):
         return response.json()
     except requests.RequestException as e:
         logger.error(f"Token exchange failed: {str(e)}")
+        if hasattr(e, 'response') and e.response is not None:
+            try:
+                error_details = e.response.json()
+                logger.error(f"Error details: {error_details}")
+            except:
+                logger.error(f"HTTP {e.response.status_code}: {e.response.text}")
         raise Exception(f"Failed to exchange authorization code: {str(e)}")
 
-def exchange_for_workspace_token(federated_token):
-    """Exchange federated token for Databricks workspace token"""
-    workspace_url = f"https://{config.databricks_server_hostname}"
-    
-    workspace_data = {
-        'subject_token': federated_token,
-        'subject_token_type': 'urn:ietf:params:oauth:token-type:jwt',
-        'grant_type': 'urn:ietf:params:oauth:grant-type:token-exchange',
-        'scope': 'all-apis'
-    }
-    
-    try:
-        response = requests.post(
-            f"{workspace_url}/oidc/v1/token",
-            data=workspace_data,
-            headers={'Content-Type': 'application/x-www-form-urlencoded'},
-            timeout=30
-        )
-        response.raise_for_status()
-        return response.json()
-    except requests.RequestException as e:
-        logger.error(f"Workspace token exchange failed: {str(e)}")
-        raise Exception(f"Failed to exchange for workspace token: {str(e)}")
-
 def refresh_access_token():
-    """Use refresh token to get new access token from Okta"""
+    """Use refresh token to get new access token from Databricks (Public Client)"""
     refresh_token = session.get('refresh_token')
     if not refresh_token:
         logger.error("No refresh token available")
@@ -154,14 +131,15 @@ def refresh_access_token():
     refresh_data = {
         'grant_type': 'refresh_token',
         'refresh_token': refresh_token,
-        'client_id': config.client_id,
-        'scope': config.oauth_scope
+        'client_id': config.client_id
+        # Note: No client_secret for public client
     }
     
     try:
-        logger.info("Refreshing access token using refresh token")
+        logger.info("Refreshing access token using refresh token (public client)")
+        token_url = f"https://{config.databricks_server_hostname}/oidc/v1/token"
         response = requests.post(
-            f"{config.issuer_url}/v1/token",
+            token_url,
             data=refresh_data,
             headers={'Content-Type': 'application/x-www-form-urlencoded'},
             timeout=30
@@ -193,24 +171,6 @@ def refresh_access_token():
                     pass
         return False
 
-def refresh_workspace_token():
-    """Refresh the Databricks workspace token using the current access token"""
-    access_token = session.get('access_token')
-    if not access_token:
-        logger.error("No access token available for workspace token refresh")
-        return False
-    
-    try:
-        logger.info("Refreshing workspace token")
-        workspace_response = exchange_for_workspace_token(access_token)
-        session['workspace_token'] = workspace_response.get('access_token')
-        logger.info("Workspace token refreshed successfully")
-        return True
-        
-    except Exception as e:
-        logger.error(f"Workspace token refresh failed: {str(e)}")
-        return False
-
 def is_token_expired():
     """Check if tokens are expired or will expire soon (5 minute buffer)"""
     token_obtained_str = session.get('token_obtained')
@@ -232,26 +192,21 @@ def refresh_tokens_if_needed():
     
     logger.info("Tokens are expired or will expire soon, attempting refresh")
     
-    # First refresh the Okta access token
+    # Refresh the Databricks access token
     if not refresh_access_token():
         logger.error("Failed to refresh access token")
         return False
     
-    # Then refresh the workspace token with the new access token
-    if not refresh_workspace_token():
-        logger.error("Failed to refresh workspace token")
-        return False
-    
-    logger.info("All tokens refreshed successfully")
+    logger.info("Tokens refreshed successfully")
     return True
 
 def execute_sql_query(query, warehouse_id):
     """Execute SQL query on Databricks SQL endpoint"""
     try:
-        # Get workspace token from session
-        workspace_token = session.get('workspace_token')
-        if not workspace_token:
-            raise Exception("No workspace token available")
+        # Get access token from session
+        access_token = session.get('access_token')
+        if not access_token:
+            raise Exception("No access token available")
         
         workspace_url = f"https://{config.databricks_server_hostname}"
         
@@ -263,7 +218,7 @@ def execute_sql_query(query, warehouse_id):
         }
         
         headers = {
-            'Authorization': f'Bearer {workspace_token}',
+            'Authorization': f'Bearer {access_token}',
             'Content-Type': 'application/json'
         }
         
@@ -292,7 +247,7 @@ def check_token_validity():
     
     if request.endpoint in protected_endpoints:
         # Check if user has tokens
-        if 'access_token' not in session or 'workspace_token' not in session:
+        if 'access_token' not in session:
             logger.info("No tokens found, redirecting to login")
             return redirect(url_for('index'))
         
@@ -304,37 +259,22 @@ def check_token_validity():
 
 @app.route('/')
 def index():
-    """Main page - login or dashboard"""
+    """Main page - login or SQL interface"""
     try:
         logger.info("Serving index page")
         
         # Check if user is authenticated
-        if 'access_token' in session and 'workspace_token' in session:
-            # User is authenticated, redirect to Databricks interface
-            return redirect(url_for('databricks_interface'))
+        if 'access_token' in session:
+            # User is authenticated, redirect to SQL interface
+            return redirect(url_for('sql_interface'))
         
         # User not authenticated, show login page
         return render_template('index.html',
                              client_id=config.client_id,
-                             issuer_url=config.issuer_url)
+                             server_hostname=config.databricks_server_hostname)
     except Exception as e:
         logger.error(f"Error serving index page: {str(e)}")
         return f"Error: {str(e)}", 500
-
-@app.route('/databricks')
-def databricks_interface():
-    """Databricks interface selection page for authenticated users"""
-    if 'access_token' not in session or 'workspace_token' not in session:
-        return redirect(url_for('index'))
-    
-    workspace_url = f"https://{config.databricks_server_hostname}"
-    token_obtained = session.get('token_obtained')
-    
-    return render_template('databricks_interface.html',
-                         workspace_url=workspace_url,
-                         token_obtained=token_obtained,
-                         model_name=config.model_name,
-                         server_hostname=config.databricks_server_hostname)
 
 @app.route('/login')
 def login():
@@ -359,9 +299,9 @@ def login():
             'code_challenge_method': 'S256'
         }
         
-        auth_url = f"{config.issuer_url}/v1/authorize?" + urlencode(auth_params)
+        auth_url = f"https://{config.databricks_server_hostname}/oidc/v1/authorize?" + urlencode(auth_params)
         
-        logger.info("Redirecting to OAuth authorization")
+        logger.info("Redirecting to Databricks OAuth authorization (public client)")
         return redirect(auth_url)
         
     except Exception as e:
@@ -396,29 +336,20 @@ def callback():
             logger.error("No code verifier in session")
             return "Invalid session state", 400
         
-        logger.info("Exchanging authorization code for tokens")
+        logger.info("Exchanging authorization code for tokens (public client)")
         token_response = exchange_code_for_token(authorization_code, code_verifier)
         
         # Store tokens in session
         session['access_token'] = token_response.get('access_token')
-        session['id_token'] = token_response.get('id_token')
         session['refresh_token'] = token_response.get('refresh_token')
         session['token_obtained'] = datetime.now().isoformat()
-        
-        # Exchange for workspace token
-        federated_token = token_response.get('access_token')
-        logger.info("Exchanging for workspace token")
-        workspace_response = exchange_for_workspace_token(federated_token)
-        
-        session['workspace_token'] = workspace_response.get('access_token')
-        session['workspace_url'] = f"https://{config.databricks_server_hostname}"
         
         # Clean up session
         session.pop('code_verifier', None)
         session.pop('oauth_state', None)
         
-        logger.info("OAuth flow completed successfully")
-        return redirect(url_for('databricks_interface'))
+        logger.info("Databricks OAuth flow completed successfully (public client)")
+        return redirect(url_for('sql_interface'))
         
     except Exception as e:
         logger.error(f"Error processing OAuth callback: {str(e)}")
@@ -427,10 +358,10 @@ def callback():
 @app.route('/sql')
 def sql_interface():
     """SQL query interface"""
-    if 'access_token' not in session or 'workspace_token' not in session:
+    if 'access_token' not in session:
         return redirect(url_for('index'))
     
-    workspace_url = session.get('workspace_url')
+    workspace_url = f"https://{config.databricks_server_hostname}"
     token_obtained = session.get('token_obtained')
     
     # Extract default warehouse ID from config if available
@@ -448,7 +379,7 @@ def sql_interface():
 def execute_sql():
     """Execute SQL query"""
     try:
-        if 'workspace_token' not in session:
+        if 'access_token' not in session:
             return jsonify({'error': 'Not authenticated'}), 401
         
         query = request.json.get('query')
@@ -477,181 +408,6 @@ def execute_sql():
             'error': f"SQL execution failed: {str(e)}"
         }), 500
 
-def call_model_serving_endpoint(messages, temperature=0.7, max_tokens=None):
-    """Call Databricks model serving endpoint using OpenAI-compatible API"""
-    try:
-        # Get workspace token from session
-        workspace_token = session.get('workspace_token')
-        if not workspace_token:
-            raise Exception("No workspace token available")
-        
-        # Set max_tokens from config if not provided
-        if max_tokens is None:
-            max_tokens = config.model_max_tokens
-        
-        base_url = f"https://{config.databricks_server_hostname}/serving-endpoints"
-        logger.info(f"Calling model serving endpoint: {config.model_name} at {base_url}")
-        logger.info(f"Request parameters - temperature: {temperature}, max_tokens: {max_tokens}")
-        
-        # Use the workspace token as the API key for Databricks model serving
-        try:
-            client = OpenAI(
-                api_key=workspace_token,
-                base_url=base_url,
-                timeout=30.0,
-                max_retries=2
-            )
-        except Exception as client_error:
-            logger.error(f"Failed to create OpenAI client: {str(client_error)}")
-            raise Exception(f"OpenAI client initialization failed: {str(client_error)}")
-        
-        try:
-            chat_completion = client.chat.completions.create(
-                messages=messages,
-                model=config.model_name,
-                max_tokens=max_tokens,
-                temperature=temperature
-            )
-        except Exception as api_error:
-            logger.error(f"Model serving API call failed: {str(api_error)}")
-            raise Exception(f"Model serving API error: {str(api_error)}")
-        
-        logger.info(f"Model serving call successful")
-        response_content = chat_completion.choices[0].message.content
-        logger.info(f"Response content type: {type(response_content)}")
-        logger.info(f"Response content: {response_content}")
-        
-        # Handle structured response from Databricks model
-        if isinstance(response_content, list):
-            # Look for the text content in the structured response
-            for item in response_content:
-                if isinstance(item, dict) and item.get('type') == 'text':
-                    return item.get('text', '')
-            # If no text type found, try to extract any text content
-            text_parts = []
-            for item in response_content:
-                if isinstance(item, dict):
-                    if 'text' in item:
-                        text_parts.append(item['text'])
-                    elif 'summary' in item and isinstance(item['summary'], list):
-                        for summary_item in item['summary']:
-                            if isinstance(summary_item, dict) and 'text' in summary_item:
-                                text_parts.append(summary_item['text'])
-            return '\n'.join(text_parts) if text_parts else str(response_content)
-        
-        return response_content
-        
-    except Exception as e:
-        logger.error(f"Model serving call failed: {str(e)}")
-        raise
-
-@app.route('/chat')
-def chat_interface():
-    """Chat interface with Databricks model"""
-    if 'access_token' not in session or 'workspace_token' not in session:
-        return redirect(url_for('index'))
-    
-    workspace_url = f"https://{config.databricks_server_hostname}"
-    token_obtained = session.get('token_obtained')
-    
-    return render_template('chat_interface.html',
-                         workspace_url=workspace_url,
-                         token_obtained=token_obtained,
-                         model_name=config.model_name,
-                         server_hostname=config.databricks_server_hostname)
-
-@app.route('/send-message', methods=['POST'])
-def send_message():
-    """Send message to the model and get response"""
-    try:
-        if 'workspace_token' not in session:
-            return jsonify({'error': 'Not authenticated'}), 401
-        
-        data = request.json
-        user_message = data.get('message', '').strip()
-        chat_history = data.get('history', [])
-        temperature = float(data.get('temperature', 0.7))
-        max_tokens = int(data.get('max_tokens', config.model_max_tokens))
-        
-        if not user_message:
-            return jsonify({'error': 'Missing message'}), 400
-        
-        # Build messages array for the model
-        messages = []
-        
-        # Add system message if this is the first message
-        if not chat_history:
-            messages.append({
-                "role": "system",
-                "content": "You are a helpful AI assistant. Provide clear, accurate, and helpful responses."
-            })
-        
-        # Add chat history
-        for msg in chat_history:
-            messages.append({
-                "role": msg.get('role', 'user'),
-                "content": msg.get('content', '')
-            })
-        
-        # Add current user message
-        messages.append({
-            "role": "user",
-            "content": user_message
-        })
-        
-        # Call the model
-        response_content = call_model_serving_endpoint(
-            messages=messages,
-            temperature=temperature,
-            max_tokens=max_tokens
-        )
-        
-        logger.info(f"Final response content type: {type(response_content)}")
-        logger.info(f"Final response content: {response_content}")
-        
-        return jsonify({
-            'success': True,
-            'response': response_content,
-            'timestamp': datetime.now().isoformat(),
-            'model': config.model_name,
-            'temperature': temperature,
-            'max_tokens': max_tokens,
-            'executed_as': 'User Account'
-        })
-        
-    except Exception as e:
-        logger.error(f"Chat message error: {str(e)}")
-        return jsonify({
-            'success': False,
-            'error': f"Chat failed: {str(e)}"
-        }), 500
-
-@app.route('/test-openai')
-def test_openai():
-    """Test OpenAI client initialization"""
-    try:
-        # Test basic OpenAI client creation
-        test_client = OpenAI(
-            api_key="test-key",
-            base_url="https://api.openai.com/v1",
-            timeout=30.0,
-            max_retries=2
-        )
-        
-        return jsonify({
-            'success': True,
-            'openai_version': openai.__version__,
-            'client_created': True,
-            'message': 'OpenAI client can be initialized successfully'
-        })
-    except Exception as e:
-        return jsonify({
-            'success': False,
-            'error': str(e),
-            'openai_version': openai.__version__ if hasattr(openai, '__version__') else 'unknown',
-            'message': 'OpenAI client initialization failed'
-        }), 500
-
 @app.route('/logout')
 def logout():
     """Clear session and logout"""
@@ -661,14 +417,15 @@ def logout():
 @app.route('/health')
 def health():
     """Health check endpoint"""
-    authenticated = 'access_token' in session and 'workspace_token' in session
+    authenticated = 'access_token' in session
     
     return jsonify({
         'status': 'healthy',
         'timestamp': datetime.now().isoformat(),
         'authenticated': authenticated,
-        'okta_configured': bool(config.issuer_url and config.client_id),
-        'databricks_configured': bool(config.databricks_server_hostname and config.databricks_http_path)
+        'databricks_configured': bool(config.databricks_server_hostname and config.client_id),
+        'sql_endpoint_configured': bool(config.databricks_http_path),
+        'client_type': 'public'
     })
 
 @app.route('/token-status')
@@ -692,17 +449,18 @@ def token_status():
             'time_remaining_minutes': int(time_remaining.total_seconds() / 60),
             'expires_soon': is_token_expired(),
             'has_refresh_token': 'refresh_token' in session,
-            'has_workspace_token': 'workspace_token' in session
+            'client_type': 'public'
         })
     except Exception as e:
         return jsonify({'error': f'Error calculating token status: {str(e)}'}), 500
 
 if __name__ == '__main__':
-    port = int(os.environ.get('PORT', 5000))
+    port = int(os.environ.get('PORT', 8003))
     debug = os.environ.get('FLASK_DEBUG', 'True').lower() == 'true'
     
-    logger.info(f"Starting User Authentication OAuth App on port {port}")
+    logger.info(f"Starting Databricks Public OAuth App on port {port}")
     logger.info(f"Client ID: {config.client_id}")
+    logger.info(f"Client Type: Public (PKCE only)")
     logger.info(f"Databricks Server: {config.databricks_server_hostname}")
     logger.info(f"Redirect URI: {config.redirect_uri}")
     

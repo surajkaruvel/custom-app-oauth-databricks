@@ -73,7 +73,7 @@ For better control, create a custom authorization server:
 
 3. **Create Custom Scope:**
    ```
-   Name: all-apis
+   Name: databricks-token-federation
    Description: Access to all Databricks APIs
    ```
 
@@ -88,7 +88,7 @@ For better control, create a custom authorization server:
    ```
    Rule Name: Allow All APIs
    Grant type: Client Credentials
-   Scopes: all-apis
+   Scopes: databricks-token-federation
    ```
 
 ## 🏢 Step 3: Configure Databricks Federation
@@ -135,7 +135,7 @@ GRANT USAGE ON SQL WAREHOUSE 'your-warehouse-id' TO SERVICE PRINCIPAL 'your-okta
 ISSUER_URL=https://your-okta-domain.okta.com/oauth2/your-auth-server-id
 CLIENT_ID=your-service-app-client-id-here
 CLIENT_SECRET=your-service-app-client-secret-here
-OAUTH_SCOPE=all-apis
+OAUTH_SCOPE=databricks-token-federation
 
 # Databricks Configuration
 DATABRICKS_SERVER_HOSTNAME=your-workspace.cloud.databricks.com
@@ -163,7 +163,7 @@ DATABRICKS_HTTP_PATH=/sql/1.0/warehouses/your-warehouse-id
 ```bash
 curl -X POST "https://your-okta-domain.okta.com/oauth2/your-auth-server-id/v1/token" \
   -H "Content-Type: application/x-www-form-urlencoded" \
-  -d "grant_type=client_credentials&client_id=YOUR_CLIENT_ID&client_secret=YOUR_CLIENT_SECRET&scope=all-apis"
+  -d "grant_type=client_credentials&client_id=YOUR_CLIENT_ID&client_secret=YOUR_CLIENT_SECRET&scope=databricks-token-federation"
 ```
 
 **Expected Response:**
@@ -172,7 +172,7 @@ curl -X POST "https://your-okta-domain.okta.com/oauth2/your-auth-server-id/v1/to
   "access_token": "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9...",
   "token_type": "Bearer",
   "expires_in": 3600,
-  "scope": "all-apis"
+  "scope": "databricks-token-federation"
 }
 ```
 
@@ -234,7 +234,7 @@ curl http://localhost:7000/health
    # Check if you can get a token from Okta
    curl -v -X POST "https://your-domain.okta.com/oauth2/your-server/v1/token" \
      -H "Content-Type: application/x-www-form-urlencoded" \
-     -d "grant_type=client_credentials&client_id=YOUR_ID&client_secret=YOUR_SECRET&scope=all-apis"
+     -d "grant_type=client_credentials&client_id=YOUR_ID&client_secret=YOUR_SECRET&scope=databricks-token-federation"
    ```
 
 2. **Check Token Content:**

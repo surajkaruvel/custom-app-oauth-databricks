@@ -1,0 +1,237 @@
+{% extends "base.html" %}
+
+{% block title %}Databricks Platform - Entra ID OAuth{% endblock %}
+
+{% block content %}
+<div class="container my-4">
+    <div class="row justify-content-center">
+        <div class="col-lg-10">
+            <!-- Step Indicator -->
+            <div class="step-indicator">
+                <div class="step completed">
+                    <i class="fas fa-check me-1"></i>
+                    Configure
+                </div>
+                <div class="step completed">
+                    <i class="fas fa-check me-1"></i>
+                    Authenticate
+                </div>
+                <div class="step completed">
+                    <i class="fas fa-check me-1"></i>
+                    Exchange
+                </div>
+                <div class="step completed">
+                    <i class="fas fa-rocket me-1"></i>
+                    Launch
+                </div>
+            </div>
+
+            <!-- Success Message -->
+            <div class="alert alert-success" role="alert">
+                <h4 class="alert-heading">
+                    <i class="fas fa-check-circle me-2"></i>
+                    Success! Authentication Complete
+                </h4>
+                <p class="mb-0">
+                    You have been successfully authenticated with Microsoft Entra ID and connected to Databricks. Choose an interface below to get started.
+                </p>
+            </div>
+
+            <!-- Interface Selection -->
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">
+                        <i class="fas fa-rocket me-2"></i>
+                        Choose Your Interface
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <strong><i class="fas fa-cloud me-1"></i> Workspace:</strong><br>
+                            <code>{{ workspace_url }}</code>
+                        </div>
+                        <div class="col-md-6">
+                            <strong><i class="fas fa-clock me-1"></i> Token Status:</strong><br>
+                            <span id="expires-at" data-expires="{{ expires_at.isoformat() }}">
+                                Expires in {{ expires_in // 60 }}m {{ expires_in % 60 }}s
+                            </span>
+                        </div>
+                    </div>
+
+                    <!-- Interface Options -->
+                    <div class="row g-4 mb-4">
+                        <div class="col-md-6">
+                            <div class="card h-100 border-primary">
+                                <div class="card-body text-center">
+                                    <div class="mb-3">
+                                        <i class="fas fa-database fa-3x text-primary"></i>
+                                    </div>
+                                    <h5 class="card-title">SQL Analytics</h5>
+                                    <p class="card-text">Execute SQL queries against your Databricks workspace with real-time results and data visualization.</p>
+                                    <a href="{{ url_for('sql_setup') }}" class="btn btn-primary">
+                                        <i class="fas fa-database me-1"></i>
+                                        Launch SQL Interface
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="card h-100 border-success">
+                                <div class="card-body text-center">
+                                    <div class="mb-3">
+                                        <i class="fas fa-robot fa-3x text-success"></i>
+                                    </div>
+                                    <h5 class="card-title">AI Assistant</h5>
+                                    <p class="card-text">Chat with AI models through Databricks Model Serving endpoints for intelligent conversations.</p>
+                                    <a href="{{ url_for('chat_setup') }}" class="btn btn-success">
+                                        <i class="fas fa-comments me-1"></i>
+                                        Launch Chat Interface
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Authentication Info -->
+                    <div class="card bg-light">
+                        <div class="card-body">
+                            <h6 class="card-title">
+                                <i class="fab fa-microsoft me-1"></i>
+                                Authentication Details
+                            </h6>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <p class="card-text small text-muted mb-2">
+                                        <strong>Identity Provider:</strong> Microsoft Entra ID<br>
+                                        <strong>Authentication Method:</strong> OAuth 2.0 with PKCE<br>
+                                        <strong>Token Type:</strong> Databricks Workspace Token<br>
+                                        <strong>Token Exchange:</strong> Entra ID → Databricks OIDC
+                                    </p>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="btn-group" role="group">
+                                        <button 
+                                            type="button" 
+                                            class="btn btn-outline-primary btn-sm" 
+                                            onclick="showToken()"
+                                            id="show-token-btn"
+                                        >
+                                            <i class="fas fa-eye me-1"></i>
+                                            Show Token
+                                        </button>
+                                        <a href="{{ url_for('clear_session') }}" class="btn btn-outline-secondary btn-sm">
+                                            <i class="fas fa-sign-out-alt me-1"></i>
+                                            Sign Out
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Hidden Token Display -->
+            <div id="token-section" class="card mt-3" style="display: none;">
+                <div class="card-header bg-warning text-dark">
+                    <h6 class="mb-0">
+                        <i class="fas fa-exclamation-triangle me-1"></i>
+                        Access Token (Handle with Care)
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div class="mb-2">
+                        <div class="token-display" id="token-display" style="font-family: monospace; word-break: break-all; background: #f8f9fa; padding: 10px; border-radius: 5px;">{{ workspace_token }}</div>
+                    </div>
+                    <div class="btn-group" role="group">
+                        <button 
+                            type="button" 
+                            class="btn btn-outline-primary btn-sm" 
+                            onclick="copyToClipboard('{{ workspace_token }}', 'copy-token-btn')"
+                            id="copy-token-btn"
+                        >
+                            <i class="fas fa-copy me-1"></i>
+                            Copy Token
+                        </button>
+                        <button 
+                            type="button" 
+                            class="btn btn-outline-secondary btn-sm" 
+                            onclick="hideToken()"
+                        >
+                            <i class="fas fa-eye-slash me-1"></i>
+                            Hide Token
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Features Overview -->
+            <div class="card mt-4">
+                <div class="card-header">
+                    <h6 class="mb-0">
+                        <i class="fas fa-star me-2"></i>
+                        Available Features
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h6><i class="fas fa-database me-1 text-primary"></i> SQL Analytics:</h6>
+                            <ul class="small">
+                                <li>Execute SQL queries in real-time</li>
+                                <li>View results in formatted tables</li>
+                                <li>Export query results</li>
+                                <li>Query performance metrics</li>
+                            </ul>
+                        </div>
+                        <div class="col-md-6">
+                            <h6><i class="fas fa-robot me-1 text-success"></i> AI Assistant:</h6>
+                            <ul class="small">
+                                <li>Chat with AI models via Model Serving</li>
+                                <li>Real-time conversation interface</li>
+                                <li>Export chat history</li>
+                                <li>Configurable model parameters</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    let remainingSeconds = {{ expires_in }};
+    
+    // Update token countdown
+    function updateTokenCountdown() {
+        const expiresAt = document.getElementById('expires-at');
+        if (expiresAt && remainingSeconds > 0) {
+            const minutes = Math.floor(remainingSeconds / 60);
+            const seconds = remainingSeconds % 60;
+            expiresAt.textContent = `Expires in ${minutes}m ${seconds}s`;
+            remainingSeconds--;
+        } else if (expiresAt) {
+            expiresAt.textContent = 'Token expired';
+            expiresAt.classList.add('text-danger');
+        }
+    }
+    
+    // Start countdown
+    updateTokenCountdown();
+    setInterval(updateTokenCountdown, 1000);
+    
+    function showToken() {
+        document.getElementById('token-section').style.display = 'block';
+        document.getElementById('show-token-btn').style.display = 'none';
+    }
+    
+    function hideToken() {
+        document.getElementById('token-section').style.display = 'none';
+        document.getElementById('show-token-btn').style.display = 'inline-block';
+    }
+</script>
+{% endblock %}

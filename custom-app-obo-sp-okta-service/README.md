@@ -91,7 +91,7 @@ The app will start on **http://localhost:7000**
 4. **Configure:**
    - **App integration name**: `Databricks Service Principal`
    - **Grant types**: ✅ Client Credentials
-   - **Scopes**: `all-apis`
+   - **Scopes**: `databricks-token-federation`
 
 5. **Save and note:**
    - **Client ID**
@@ -134,7 +134,7 @@ GRANT SELECT ON TABLE main.default.* TO SERVICE PRINCIPAL 'your-okta-client-id';
 | `ISSUER_URL` | Okta authorization server URL | Yes | - |
 | `CLIENT_ID` | Okta service app client ID | Yes | - |
 | `CLIENT_SECRET` | Okta service app client secret | Yes | - |
-| `OAUTH_SCOPE` | OAuth scope for Okta | No | `all-apis` |
+| `OAUTH_SCOPE` | OAuth scope for Okta | No | `databricks-token-federation` |
 | `DATABRICKS_SERVER_HOSTNAME` | Databricks workspace hostname | Yes | - |
 | `DATABRICKS_HTTP_PATH` | Default warehouse path | No | - |
 

@@ -53,7 +53,7 @@ ISSUER_URL=https://your-okta-domain.okta.com/oauth2/your-auth-server-id
 CLIENT_ID=your-web-app-client-id
 CLIENT_SECRET=your-web-app-client-secret
 REDIRECT_URI=http://localhost:6000/callback
-OAUTH_SCOPE=openid profile email all-apis offline_access
+OAUTH_SCOPE=openid profile email offline_access
 
 # Databricks Configuration
 DATABRICKS_SERVER_HOSTNAME=your-workspace.cloud.databricks.com

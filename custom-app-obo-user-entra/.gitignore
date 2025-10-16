@@ -1,0 +1,33 @@
+# Configuration
+config.env
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+env/
+ENV/
+.venv
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Temporary files
+*.log
+temp_*.txt
+*.tmp
+
+# Debug scripts (keep repo clean)
+diagnose_*.py
+analyze_*.py

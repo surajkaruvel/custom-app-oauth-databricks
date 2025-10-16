@@ -58,7 +58,7 @@ A secure Flask application that authenticates users via Okta OAuth 2.0 with PKCE
 |----------|---------|-------------|
 | `PORT` | `5000` | Application port |
 | `FLASK_DEBUG` | `True` | Debug mode |
-| `OAUTH_SCOPE` | `openid profile email all-apis offline_access` | OAuth scopes |
+| `OAUTH_SCOPE` | `openid profile email offline_access` | OAuth scopes |
 
 ### Okta SPA Application Setup
 
@@ -66,7 +66,7 @@ Configure your Okta application as:
 - **Application Type**: Single-Page App (SPA)
 - **Grant Types**: Authorization Code with PKCE
 - **Redirect URIs**: `http://localhost:5000/callback`
-- **Scopes**: `openid`, `profile`, `email`, `all-apis`, `offline_access`
+- **Scopes**: `openid`, `profile`, `email`, `offline_access`
 
 ## 🎯 Usage
 

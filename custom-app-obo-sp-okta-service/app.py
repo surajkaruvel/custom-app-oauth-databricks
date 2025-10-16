@@ -59,7 +59,7 @@ class Config:
         self.issuer_url = os.environ.get('ISSUER_URL', '')
         self.client_id = os.environ.get('CLIENT_ID', '')
         self.client_secret = os.environ.get('CLIENT_SECRET', '')
-        self.oauth_scope = os.environ.get('OAUTH_SCOPE', 'all-apis')
+        self.oauth_scope = os.environ.get('OAUTH_SCOPE', 'databricks-token-federation')
         
         # Databricks Configuration
         self.databricks_server_hostname = os.environ.get('DATABRICKS_SERVER_HOSTNAME', '')

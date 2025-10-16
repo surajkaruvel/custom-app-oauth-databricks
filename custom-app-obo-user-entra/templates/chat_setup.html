@@ -1,0 +1,113 @@
+{% extends "base.html" %}
+
+{% block title %}Chat Interface Setup - Databricks OAuth{% endblock %}
+
+{% block content %}
+<div class="container my-4">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <div class="card">
+                <div class="card-header bg-success text-white">
+                    <h4 class="mb-0">
+                        <i class="fas fa-robot me-2"></i>
+                        AI Assistant Setup
+                    </h4>
+                </div>
+                <div class="card-body">
+                    <p class="text-muted mb-4">
+                        Enter the URL of your Databricks Model Serving Endpoint to start chatting with AI models.
+                    </p>
+
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <strong><i class="fas fa-cloud me-1"></i> Workspace:</strong><br>
+                            <code>{{ workspace_url }}</code>
+                        </div>
+                        <div class="col-md-6">
+                            <strong><i class="fas fa-clock me-1"></i> Token Status:</strong><br>
+                            <span id="expires-at" data-expires="{{ expires_at.isoformat() }}">
+                                Expires in 60m 0s
+                            </span>
+                        </div>
+                    </div>
+
+                    <form method="POST" action="{{ url_for('chat_interface') }}">
+                        <div class="mb-3">
+                            <label for="model_endpoint" class="form-label">
+                                <strong><i class="fas fa-robot me-1"></i> Model Serving Endpoint URL</strong>
+                            </label>
+                            <input
+                                type="url"
+                                class="form-control form-control-lg"
+                                id="model_endpoint"
+                                name="model_endpoint"
+                                placeholder="https://your-workspace.databricks.azure.com/serving-endpoints/your-model/invocations"
+                                required
+                                pattern="https?://.*"
+                                title="Please enter a valid URL starting with http:// or https://"
+                            >
+                            <div class="form-text">
+                                <i class="fas fa-info-circle me-1"></i>
+                                You can find this in your Databricks Model Serving endpoint details.
+                            </div>
+                        </div>
+
+                        <div class="d-grid">
+                            <button type="submit" class="btn btn-success btn-lg">
+                                <i class="fas fa-comments me-2"></i>
+                                Launch Chat Interface
+                            </button>
+                        </div>
+                    </form>
+
+                    <div class="mt-4">
+                        <div class="card bg-light">
+                            <div class="card-body">
+                                <h6 class="card-title">
+                                    <i class="fas fa-lightbulb me-1"></i>
+                                    How to Find Your Model Endpoint
+                                </h6>
+                                <ol class="small mb-0">
+                                    <li>Go to your Databricks workspace</li>
+                                    <li>Navigate to <strong>Machine Learning</strong> → <strong>Model Serving</strong></li>
+                                    <li>Click on your model serving endpoint</li>
+                                    <li>Copy the <strong>Invocation URL</strong> from the endpoint details</li>
+                                    <li>The URL should end with <code>/invocations</code></li>
+                                </ol>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="text-center mt-3">
+                <a href="{{ url_for('databricks_interface') }}" class="btn btn-outline-secondary">
+                    <i class="fas fa-arrow-left me-1"></i>
+                    Back to Interface Selection
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    let remainingSeconds = 3600; // Always start from 60 minutes
+    function updateTokenCountdown() {
+        const expiresAt = document.getElementById('expires-at');
+        if (expiresAt && remainingSeconds > 0) {
+            const minutes = Math.floor(remainingSeconds / 60);
+            const seconds = remainingSeconds % 60;
+            expiresAt.textContent = `Expires in ${minutes}m ${seconds}s`;
+            remainingSeconds--;
+        } else if (expiresAt) {
+            expiresAt.textContent = 'Token expired';
+            expiresAt.classList.add('text-danger');
+        }
+    }
+    updateTokenCountdown();
+    setInterval(updateTokenCountdown, 1000);
+</script>
+{% endblock %}
+
