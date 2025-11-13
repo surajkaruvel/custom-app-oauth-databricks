@@ -1,0 +1,394 @@
+{% extends "base.html" %}
+
+{% block title %}SQL Interface - Service Principal{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="row">
+        <!-- Main SQL Interface -->
+        <div class="col-lg-8">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h4 class="mb-0">
+                        <i class="fas fa-database me-2"></i>
+                        SQL Query Interface
+                        <small class="text-light fs-6">Service Principal</small>
+                    </h4>
+                </div>
+                <div class="card-body">
+                    <form id="sql-form">
+                        <!-- Warehouse ID Input -->
+                        <div class="mb-3">
+                            <label for="warehouse_id" class="form-label">
+                                <strong><i class="fas fa-server me-1"></i> SQL Warehouse ID</strong>
+                            </label>
+                            <input 
+                                type="text" 
+                                class="form-control" 
+                                id="warehouse_id" 
+                                name="warehouse_id" 
+                                value="{{ default_warehouse_id }}"
+                                placeholder="Enter your SQL Warehouse ID (e.g., 168bbc0657bfe886)"
+                                required
+                            >
+                            <div class="form-text">
+                                <i class="fas fa-info-circle me-1"></i>
+                                Find your Warehouse ID in Databricks SQL → Warehouses → Click your warehouse → Copy the ID from the URL or settings.
+                            </div>
+                        </div>
+
+                        <!-- SQL Query Input -->
+                        <div class="mb-3">
+                            <label for="sql_query" class="form-label">
+                                <strong><i class="fas fa-code me-1"></i> SQL Query</strong>
+                            </label>
+                            <textarea 
+                                class="form-control" 
+                                id="sql_query" 
+                                name="sql_query" 
+                                rows="8" 
+                                placeholder="SELECT current_timestamp(), current_user();"
+                                required
+                            ></textarea>
+                        </div>
+
+                        <!-- Execute Button -->
+                        <div class="d-flex justify-content-between align-items-center">
+                            <button type="submit" class="btn btn-primary btn-lg">
+                                <i class="fas fa-play me-2"></i>
+                                Execute Query
+                            </button>
+                            <div class="text-muted small">
+                                <i class="fas fa-robot me-1"></i>
+                                Executing as: <strong>Service Principal</strong>
+                            </div>
+                        </div>
+                    </form>
+
+                    <!-- Query Status -->
+                    <div class="mt-4">
+                        <div class="row">
+                            <div class="col-md-4">
+                                <strong>Status:</strong> <span id="query-status">Ready</span>
+                            </div>
+                            <div class="col-md-4">
+                                <strong>Warehouse:</strong> <span id="warehouse-used">-</span>
+                            </div>
+                            <div class="col-md-4">
+                                <strong>Execution Time:</strong> <span id="execution-time">-</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Query Results -->
+            <div id="results-container" class="card mt-4" style="display: none;">
+                <div class="card-header bg-success text-white">
+                    <h5 class="mb-0">
+                        <i class="fas fa-table me-2"></i>
+                        Query Results
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div id="results-content"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Sidebar -->
+        <div class="col-lg-4">
+            <!-- Token Status Card -->
+            <div class="card">
+                <div class="card-header bg-info text-white">
+                    <h6 class="mb-0">
+                        <i class="fas fa-key me-2"></i>
+                        Token Status
+                    </h6>
+                </div>
+                <div class="card-body">
+                    {% if token_obtained %}
+                    <div class="mb-2">
+                        <strong>Token Obtained:</strong><br>
+                        <small class="text-muted">{{ token_obtained }}</small>
+                    </div>
+                    <div class="mb-2">
+                        <strong>Expires At:</strong><br>
+                        <small class="text-success" id="expires-at">{{ expires_at }}</small>
+                    </div>
+                    <div class="mb-3">
+                        <strong>Authentication:</strong><br>
+                        <span class="badge bg-success">Service Principal (M2M)</span>
+                    </div>
+                    {% else %}
+                    <div class="text-warning">
+                        <i class="fas fa-exclamation-triangle me-1"></i>
+                        No tokens available
+                    </div>
+                    {% endif %}
+                    
+                    <div class="d-grid gap-2">
+                        <button class="btn btn-outline-primary btn-sm" onclick="refreshTokens()">
+                            <i class="fas fa-sync-alt me-1"></i>
+                            Refresh Tokens
+                        </button>
+                        <a href="{{ url_for('token_status') }}" class="btn btn-outline-info btn-sm" target="_blank">
+                            <i class="fas fa-info-circle me-1"></i>
+                            Token Details
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            <!-- SQL Query Examples -->
+            <div class="card mt-3">
+                <div class="card-header bg-primary text-white">
+                    <h6 class="mb-0">
+                        <i class="fas fa-code me-2"></i>
+                        SQL Query Examples
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div class="small">
+                        <div class="mb-3">
+                            <strong>Basic Queries:</strong>
+                            <div class="mt-1">
+                                <button class="btn btn-outline-primary btn-sm me-1 mb-1" onclick="insertExample('SELECT current_timestamp()')">Current Time</button>
+                                <button class="btn btn-outline-primary btn-sm me-1 mb-1" onclick="insertExample('SELECT current_user()')">Current User</button>
+                                <button class="btn btn-outline-primary btn-sm me-1 mb-1" onclick="insertExample('SHOW DATABASES')">Show Databases</button>
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <strong>Data Exploration:</strong>
+                            <div class="mt-1">
+                                <button class="btn btn-outline-success btn-sm me-1 mb-1" onclick="insertExample('SHOW TABLES IN default')">Show Tables</button>
+                                <button class="btn btn-outline-success btn-sm me-1 mb-1" onclick="insertExample('DESCRIBE EXTENDED table_name')">Describe Table</button>
+                                <button class="btn btn-outline-success btn-sm me-1 mb-1" onclick="insertExample('SELECT * FROM table_name LIMIT 10')">Sample Data</button>
+                            </div>
+                        </div>
+                        <div class="mb-2">
+                            <strong>Analytics:</strong>
+                            <div class="mt-1">
+                                <button class="btn btn-outline-info btn-sm me-1 mb-1" onclick="insertExample('SELECT COUNT(*) FROM table_name')">Row Count</button>
+                                <button class="btn btn-outline-info btn-sm me-1 mb-1" onclick="insertExample('SELECT column, COUNT(*) FROM table_name GROUP BY column')">Group By</button>
+                                <button class="btn btn-outline-info btn-sm me-1 mb-1" onclick="insertExample('SELECT AVG(column), MAX(column), MIN(column) FROM table_name')">Aggregates</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Warehouse Information -->
+            <div class="card mt-3">
+                <div class="card-header">
+                    <h6 class="mb-0">
+                        <i class="fas fa-server me-2"></i>
+                        Warehouse Information
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div class="small">
+                        <div class="mb-2">
+                            <strong>Server:</strong><br>
+                            <code class="small">{{ server_hostname }}</code>
+                        </div>
+                        {% if default_warehouse_id %}
+                        <div class="mb-2">
+                            <strong>Default Warehouse:</strong><br>
+                            <code class="small">{{ default_warehouse_id }}</code>
+                        </div>
+                        {% endif %}
+                        <div class="mb-2">
+                            <strong>How to find Warehouse ID:</strong>
+                        </div>
+                        <ol class="small">
+                            <li>Go to Databricks SQL</li>
+                            <li>Click "Warehouses" in sidebar</li>
+                            <li>Click your warehouse name</li>
+                            <li>Copy ID from URL or Connection Details</li>
+                        </ol>
+                        <div class="mt-2">
+                            <strong>Example:</strong><br>
+                            <code class="small">168bbc0657bfe886</code>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // Function to insert SQL examples into the query textarea
+    function insertExample(query) {
+        const textarea = document.getElementById('sql_query');
+        textarea.value = query;
+        textarea.focus();
+    }
+
+    // Function to refresh tokens manually
+    async function refreshTokens() {
+        try {
+            const response = await fetch('/refresh-tokens', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                }
+            });
+            
+            const result = await response.json();
+            
+            if (result.success) {
+                alert('Tokens refreshed successfully!');
+                location.reload();
+            } else {
+                alert('Token refresh failed: ' + result.error);
+            }
+        } catch (error) {
+            alert('Token refresh failed: ' + error.message);
+        }
+    }
+
+    // Handle form submission
+    document.getElementById('sql-form').addEventListener('submit', async function(e) {
+        e.preventDefault();
+        
+        const statusElement = document.getElementById('query-status');
+        const warehouseUsedElement = document.getElementById('warehouse-used');
+        const executionTimeElement = document.getElementById('execution-time');
+        const resultsContainer = document.getElementById('results-container');
+        
+        const query = document.getElementById('sql_query').value;
+        const warehouseId = document.getElementById('warehouse_id').value;
+        
+        if (!query) {
+            alert('Please enter a SQL query');
+            return;
+        }
+        
+        if (!warehouseId) {
+            alert('Please enter a Warehouse ID');
+            return;
+        }
+        
+        // Update status
+        statusElement.innerHTML = '<span class="badge bg-warning">Executing...</span>';
+        warehouseUsedElement.innerHTML = '<small class="text-muted">-</small>';
+        executionTimeElement.innerHTML = '<small class="text-muted">-</small>';
+        resultsContainer.style.display = 'none';
+        
+        const startTime = Date.now();
+        
+        try {
+            const response = await fetch('/execute-sql', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    query: query,
+                    warehouse_id: warehouseId
+                })
+            });
+            
+            const result = await response.json();
+            const executionTime = ((Date.now() - startTime) / 1000).toFixed(2);
+            
+            executionTimeElement.innerHTML = `<small class="text-success">${executionTime}s</small>`;
+            
+            if (result.success) {
+                statusElement.innerHTML = '<span class="badge bg-success">Success</span>';
+                warehouseUsedElement.innerHTML = `<small class="text-success">${result.warehouse_id}</small>`;
+                displayResults(result.result, result.executed_at);
+                resultsContainer.style.display = 'block';
+            } else {
+                statusElement.innerHTML = '<span class="badge bg-danger">Error</span>';
+                alert('Query failed: ' + result.error);
+            }
+        } catch (error) {
+            const executionTime = ((Date.now() - startTime) / 1000).toFixed(2);
+            executionTimeElement.innerHTML = `<small class="text-danger">${executionTime}s</small>`;
+            statusElement.innerHTML = '<span class="badge bg-danger">Error</span>';
+            alert('Query failed: ' + error.message);
+        }
+    });
+
+    // Function to display query results
+    function displayResults(result, executedAt) {
+        const resultsContent = document.getElementById('results-content');
+        
+        let html = `
+            <div class="mb-3">
+                <div class="row">
+                    <div class="col-md-6">
+                        <strong>Statement ID:</strong> <code>${result.statement_id || 'N/A'}</code>
+                    </div>
+                    <div class="col-md-6">
+                        <strong>Executed At:</strong> <small>${new Date(executedAt).toLocaleString()}</small>
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        if (result.result && result.result.data_array) {
+            const data = result.result.data_array;
+            const columns = result.result.manifest?.schema?.columns || [];
+            
+            html += `
+                <div class="table-responsive">
+                    <table class="table table-striped table-hover">
+                        <thead class="table-dark">
+                            <tr>
+            `;
+            
+            // Add column headers
+            if (columns.length > 0) {
+                columns.forEach(col => {
+                    html += `<th>${col.name} <small class="text-muted">(${col.type_name})</small></th>`;
+                });
+            } else if (data.length > 0) {
+                // Fallback: use array indices as headers
+                data[0].forEach((_, index) => {
+                    html += `<th>Column ${index + 1}</th>`;
+                });
+            }
+            
+            html += `
+                            </tr>
+                        </thead>
+                        <tbody>
+            `;
+            
+            // Add data rows
+            data.forEach(row => {
+                html += '<tr>';
+                row.forEach(cell => {
+                    html += `<td>${cell !== null ? cell : '<em class="text-muted">null</em>'}</td>`;
+                });
+                html += '</tr>';
+            });
+            
+            html += `
+                        </tbody>
+                    </table>
+                </div>
+                <div class="mt-2 text-muted small">
+                    <i class="fas fa-info-circle me-1"></i>
+                    Showing ${data.length} row(s)
+                </div>
+            `;
+        } else {
+            html += `
+                <div class="alert alert-info">
+                    <i class="fas fa-info-circle me-2"></i>
+                    Query executed successfully. No data returned.
+                </div>
+            `;
+        }
+        
+        resultsContent.innerHTML = html;
+    }
+</script>
+{% endblock %}

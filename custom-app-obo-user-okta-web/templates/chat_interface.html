@@ -1,0 +1,574 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chat Interface - Databricks Model Serving</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        .chat-container {
+            height: 70vh;
+            border: 1px solid #dee2e6;
+            border-radius: 10px;
+            overflow-y: auto;
+            padding: 20px;
+            background-color: #f8f9fa;
+        }
+        .message {
+            margin-bottom: 15px;
+            display: flex;
+            align-items: flex-start;
+        }
+        .message.user {
+            justify-content: flex-end;
+        }
+        .message.assistant {
+            justify-content: flex-start;
+        }
+        .message-content {
+            max-width: 70%;
+            padding: 12px 16px;
+            border-radius: 18px;
+            word-wrap: break-word;
+        }
+        .message.user .message-content {
+            background: linear-gradient(135deg, #007bff 0%, #0056b3 100%);
+            color: white;
+            border-bottom-right-radius: 4px;
+        }
+        .message.assistant .message-content {
+            background: white;
+            border: 1px solid #dee2e6;
+            border-bottom-left-radius: 4px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+        .message-avatar {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            margin: 0 8px;
+        }
+        .message.user .message-avatar {
+            background: #007bff;
+            color: white;
+            order: 2;
+        }
+        .message.assistant .message-avatar {
+            background: #28a745;
+            color: white;
+            order: 1;
+        }
+        .message.user .message-content {
+            order: 1;
+        }
+        .message.assistant .message-content {
+            order: 2;
+        }
+        .typing-indicator {
+            display: none;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+        .typing-dots {
+            display: flex;
+            align-items: center;
+            padding: 12px 16px;
+            background: white;
+            border: 1px solid #dee2e6;
+            border-radius: 18px;
+            border-bottom-left-radius: 4px;
+        }
+        .typing-dots span {
+            height: 8px;
+            width: 8px;
+            background: #6c757d;
+            border-radius: 50%;
+            display: inline-block;
+            margin: 0 2px;
+            animation: typing 1.4s infinite ease-in-out;
+        }
+        .typing-dots span:nth-child(1) { animation-delay: -0.32s; }
+        .typing-dots span:nth-child(2) { animation-delay: -0.16s; }
+        @keyframes typing {
+            0%, 80%, 100% { transform: scale(0.8); opacity: 0.5; }
+            40% { transform: scale(1); opacity: 1; }
+        }
+        .chat-input-container {
+            border-top: 1px solid #dee2e6;
+            padding: 20px;
+            background: white;
+        }
+        .navbar-brand {
+            font-weight: 600;
+        }
+        .user-info {
+            font-size: 0.9em;
+        }
+        .model-badge {
+            background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+            color: white;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.8em;
+            font-weight: 600;
+        }
+        .settings-panel {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 20px;
+        }
+        .range-value {
+            font-weight: 600;
+            color: #007bff;
+        }
+    </style>
+</head>
+<body class="bg-light">
+    <!-- Navigation -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="#">
+                <i class="fas fa-robot me-2"></i>
+                Databricks Model Chat
+            </a>
+            
+            <div class="navbar-nav ms-auto">
+                <div class="nav-item dropdown">
+                    <a class="nav-link dropdown-toggle" href="#" id="userDropdown" role="button" data-bs-toggle="dropdown">
+                        <i class="fas fa-user me-1"></i>
+                        Web App User
+                    </a>
+                    <ul class="dropdown-menu dropdown-menu-end">
+                        <li><h6 class="dropdown-header">Navigation</h6></li>
+                        <li><a class="dropdown-item" href="{{ url_for('databricks_interface') }}">
+                            <i class="fas fa-cube me-1"></i>
+                            Databricks Home
+                        </a></li>
+                        <li><a class="dropdown-item" href="{{ url_for('sql_interface') }}">
+                            <i class="fas fa-database me-1"></i>
+                            SQL Interface
+                        </a></li>
+                        <li><a class="dropdown-item" href="{{ url_for('chat_interface') }}">
+                            <i class="fas fa-robot me-1"></i>
+                            Chat Interface
+                        </a></li>
+                        <li><hr class="dropdown-divider"></li>
+                        <li><span class="dropdown-item-text">
+                            <i class="fas fa-check-circle text-success me-1"></i>
+                            Authenticated
+                        </span></li>
+                        <li><span class="dropdown-item-text">
+                            <small class="text-muted">
+                                <i class="fas fa-clock me-1"></i>
+                                {{ token_obtained }}
+                            </small>
+                        </span></li>
+                        <li><hr class="dropdown-divider"></li>
+                        <li><a class="dropdown-item" href="{{ url_for('logout') }}">
+                            <i class="fas fa-sign-out-alt me-1"></i>
+                            Logout
+                        </a></li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container-fluid py-4">
+        <!-- Header -->
+        <div class="row mb-4">
+            <div class="col">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h2>
+                            <i class="fas fa-robot text-success me-2"></i>
+                            AI Chat Interface
+                        </h2>
+                        <p class="text-muted mb-0">
+                            <i class="fas fa-brain me-1"></i>
+                            Chat with Databricks model serving endpoint
+                        </p>
+                    </div>
+                    <div class="text-end user-info">
+                        <div class="mb-1">
+                            <small class="text-muted">
+                                <i class="fas fa-cloud me-1"></i>
+                                {{ workspace_url }}
+                            </small>
+                        </div>
+                        <div class="mb-1">
+                            <small class="text-muted">
+                                <i class="fas fa-server me-1"></i>
+                                Server: {{ server_hostname }}
+                            </small>
+                        </div>
+                        <div>
+                            <span class="model-badge">
+                                <i class="fas fa-robot me-1"></i>
+                                {{ model_name }}
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col-lg-8">
+                <!-- Chat Container -->
+                <div class="card">
+                    <div class="card-header bg-success text-white">
+                        <h5 class="mb-0">
+                            <i class="fas fa-comments me-2"></i>
+                            Chat with {{ model_name }}
+                        </h5>
+                    </div>
+                    <div class="card-body p-0">
+                        <!-- Chat Messages -->
+                        <div id="chat-container" class="chat-container">
+                            <div class="message assistant">
+                                <div class="message-avatar">
+                                    <i class="fas fa-robot"></i>
+                                </div>
+                                <div class="message-content">
+                                    <strong>{{ model_name }}</strong><br>
+                                    Hello! I'm your AI assistant powered by Databricks model serving. How can I help you today?
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Typing Indicator -->
+                        <div id="typing-indicator" class="typing-indicator">
+                            <div class="message-avatar" style="background: #28a745; color: white;">
+                                <i class="fas fa-robot"></i>
+                            </div>
+                            <div class="typing-dots">
+                                <span></span>
+                                <span></span>
+                                <span></span>
+                            </div>
+                        </div>
+                        
+                        <!-- Chat Input -->
+                        <div class="chat-input-container">
+                            <form id="chat-form">
+                                <div class="input-group">
+                                    <input 
+                                        type="text" 
+                                        class="form-control" 
+                                        id="message-input" 
+                                        placeholder="Type your message here..."
+                                        autocomplete="off"
+                                    >
+                                    <button class="btn btn-success" type="submit" id="send-btn">
+                                        <i class="fas fa-paper-plane me-1"></i>
+                                        Send
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Settings Sidebar -->
+            <div class="col-lg-4">
+                <!-- Model Settings -->
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0">
+                            <i class="fas fa-cog me-2"></i>
+                            Model Settings
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="mb-3">
+                            <label for="temperature" class="form-label">
+                                <strong>Temperature: <span id="temperature-value" class="range-value">0.7</span></strong>
+                            </label>
+                            <input type="range" class="form-range" id="temperature" min="0" max="1" step="0.1" value="0.7">
+                            <div class="form-text">Controls randomness. Lower = more focused, Higher = more creative</div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="max-tokens" class="form-label">
+                                <strong>Max Tokens: <span id="max-tokens-value" class="range-value">256</span></strong>
+                            </label>
+                            <input type="range" class="form-range" id="max-tokens" min="50" max="1000" step="50" value="256">
+                            <div class="form-text">Maximum length of the response</div>
+                        </div>
+                        
+                        <button type="button" class="btn btn-outline-secondary btn-sm" onclick="resetSettings()">
+                            <i class="fas fa-undo me-1"></i>
+                            Reset to Defaults
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Chat Actions -->
+                <div class="card mt-3">
+                    <div class="card-header">
+                        <h6 class="mb-0">
+                            <i class="fas fa-tools me-2"></i>
+                            Chat Actions
+                        </h6>
+                    </div>
+                    <div class="card-body">
+                        <button type="button" class="btn btn-outline-warning btn-sm w-100 mb-2" onclick="clearChat()">
+                            <i class="fas fa-trash me-1"></i>
+                            Clear Chat History
+                        </button>
+                        <button type="button" class="btn btn-outline-info btn-sm w-100" onclick="showSamplePrompts()">
+                            <i class="fas fa-lightbulb me-1"></i>
+                            Sample Prompts
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Model Info -->
+                <div class="card mt-3">
+                    <div class="card-header">
+                        <h6 class="mb-0">
+                            <i class="fas fa-info-circle me-2"></i>
+                            Model Information
+                        </h6>
+                    </div>
+                    <div class="card-body">
+                        <div class="small">
+                            <div class="mb-2">
+                                <strong>Model:</strong><br>
+                                <span class="text-success">
+                                    <i class="fas fa-robot me-1"></i>
+                                    {{ model_name }}
+                                </span>
+                            </div>
+                            <div class="mb-2">
+                                <strong>Authentication:</strong><br>
+                                <span class="text-success">
+                                    <i class="fas fa-check-circle me-1"></i>
+                                    OAuth Web App
+                                </span>
+                            </div>
+                            <div>
+                                <strong>Endpoint:</strong><br>
+                                <span class="text-info">
+                                    <i class="fas fa-link me-1"></i>
+                                    Model Serving API
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Sample Prompts Modal -->
+    <div class="modal fade" id="samplePromptsModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">
+                        <i class="fas fa-lightbulb me-2"></i>
+                        Sample Prompts
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="list-group list-group-flush">
+                        <button type="button" class="list-group-item list-group-item-action" onclick="useSamplePrompt('Explain the concept of machine learning in simple terms.')">
+                            <strong>Machine Learning Explanation</strong><br>
+                            <small class="text-muted">Explain the concept of machine learning in simple terms.</small>
+                        </button>
+                        <button type="button" class="list-group-item list-group-item-action" onclick="useSamplePrompt('Write a Python function to calculate the factorial of a number.')">
+                            <strong>Code Generation</strong><br>
+                            <small class="text-muted">Write a Python function to calculate the factorial of a number.</small>
+                        </button>
+                        <button type="button" class="list-group-item list-group-item-action" onclick="useSamplePrompt('What are the key benefits of using Databricks for data analytics?')">
+                            <strong>Databricks Benefits</strong><br>
+                            <small class="text-muted">What are the key benefits of using Databricks for data analytics?</small>
+                        </button>
+                        <button type="button" class="list-group-item list-group-item-action" onclick="useSamplePrompt('Summarize the latest trends in artificial intelligence.')">
+                            <strong>AI Trends</strong><br>
+                            <small class="text-muted">Summarize the latest trends in artificial intelligence.</small>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        let chatHistory = [];
+        let isTyping = false;
+
+        // Update range value displays
+        document.getElementById('temperature').addEventListener('input', function() {
+            document.getElementById('temperature-value').textContent = this.value;
+        });
+
+        document.getElementById('max-tokens').addEventListener('input', function() {
+            document.getElementById('max-tokens-value').textContent = this.value;
+        });
+
+        // Chat form submission
+        document.getElementById('chat-form').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const messageInput = document.getElementById('message-input');
+            const message = messageInput.value.trim();
+            
+            if (!message || isTyping) return;
+            
+            // Add user message to chat
+            addMessage('user', message);
+            messageInput.value = '';
+            
+            // Show typing indicator
+            showTyping();
+            
+            try {
+                const temperature = parseFloat(document.getElementById('temperature').value);
+                const maxTokens = parseInt(document.getElementById('max-tokens').value);
+                
+                const response = await fetch('/send-message', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        message: message,
+                        history: chatHistory,
+                        temperature: temperature,
+                        max_tokens: maxTokens
+                    })
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    // Add assistant response to chat
+                    const responseText = typeof result.response === 'string' ? result.response : JSON.stringify(result.response);
+                    addMessage('assistant', responseText);
+                    
+                    // Update chat history
+                    chatHistory.push({role: 'user', content: message});
+                    chatHistory.push({role: 'assistant', content: responseText});
+                } else {
+                    addMessage('assistant', `Error: ${result.error}`, true);
+                }
+                
+            } catch (error) {
+                addMessage('assistant', `Network error: ${error.message}`, true);
+            } finally {
+                hideTyping();
+            }
+        });
+
+        function addMessage(role, content, isError = false) {
+            const chatContainer = document.getElementById('chat-container');
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${role}`;
+            
+            const avatar = document.createElement('div');
+            avatar.className = 'message-avatar';
+            if (role === 'user') {
+                avatar.style.background = '#007bff';
+                avatar.innerHTML = '<i class="fas fa-user"></i>';
+            } else {
+                avatar.style.background = isError ? '#dc3545' : '#28a745';
+                avatar.innerHTML = isError ? '<i class="fas fa-exclamation-triangle"></i>' : '<i class="fas fa-robot"></i>';
+            }
+            
+            const messageContent = document.createElement('div');
+            messageContent.className = 'message-content';
+            if (isError) {
+                messageContent.style.background = '#f8d7da';
+                messageContent.style.color = '#721c24';
+                messageContent.style.border = '1px solid #f5c6cb';
+            }
+            messageContent.innerHTML = String(content).replace(/\n/g, '<br>');
+            
+            messageDiv.appendChild(avatar);
+            messageDiv.appendChild(messageContent);
+            chatContainer.appendChild(messageDiv);
+            
+            // Scroll to bottom
+            chatContainer.scrollTop = chatContainer.scrollHeight;
+        }
+
+        function showTyping() {
+            isTyping = true;
+            document.getElementById('typing-indicator').style.display = 'flex';
+            document.getElementById('send-btn').disabled = true;
+            document.getElementById('send-btn').innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Sending...';
+            
+            // Scroll to bottom
+            const chatContainer = document.getElementById('chat-container');
+            chatContainer.scrollTop = chatContainer.scrollHeight;
+        }
+
+        function hideTyping() {
+            isTyping = false;
+            document.getElementById('typing-indicator').style.display = 'none';
+            document.getElementById('send-btn').disabled = false;
+            document.getElementById('send-btn').innerHTML = '<i class="fas fa-paper-plane me-1"></i>Send';
+        }
+
+        function clearChat() {
+            if (confirm('Are you sure you want to clear the chat history?')) {
+                chatHistory = [];
+                const chatContainer = document.getElementById('chat-container');
+                chatContainer.innerHTML = `
+                    <div class="message assistant">
+                        <div class="message-avatar" style="background: #28a745; color: white;">
+                            <i class="fas fa-robot"></i>
+                        </div>
+                        <div class="message-content">
+                            <strong>{{ model_name }}</strong><br>
+                            Hello! I'm your AI assistant powered by Databricks model serving. How can I help you today?
+                        </div>
+                    </div>
+                `;
+            }
+        }
+
+        function resetSettings() {
+            document.getElementById('temperature').value = 0.7;
+            document.getElementById('max-tokens').value = 256;
+            document.getElementById('temperature-value').textContent = '0.7';
+            document.getElementById('max-tokens-value').textContent = '256';
+        }
+
+        function showSamplePrompts() {
+            const modal = new bootstrap.Modal(document.getElementById('samplePromptsModal'));
+            modal.show();
+        }
+
+        function useSamplePrompt(prompt) {
+            document.getElementById('message-input').value = prompt;
+            const modal = bootstrap.Modal.getInstance(document.getElementById('samplePromptsModal'));
+            modal.hide();
+            document.getElementById('message-input').focus();
+        }
+
+        // Auto-focus on message input
+        document.getElementById('message-input').focus();
+
+        // Enter key to send message
+        document.getElementById('message-input').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                document.getElementById('chat-form').dispatchEvent(new Event('submit'));
+            }
+        });
+    </script>
+</body>
+</html>
