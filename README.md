@@ -18,7 +18,7 @@ A collection of OAuth 2.0 integration examples for Databricks, demonstrating dif
 ## 🚀 Available Applications
 
 ### 1. **Custom App - User Authentication (Entra ID + MSAL)** 🔐
-**Directory:** `custom-app-obo-user-entra-msal/`
+**Directory:** `custom-app-user-entra-msal/`
 
 A Flask web application that authenticates users via Microsoft Entra ID (Azure AD) using the MSAL library with OAuth 2.0 Authorization Code Flow + PKCE.
 
@@ -32,7 +32,7 @@ A Flask web application that authenticates users via Microsoft Entra ID (Azure A
 
 **Quick Start:**
 ```bash
-cd custom-app-obo-user-entra-msal
+cd custom-app-user-entra-msal
 cp config.env.example config.env
 # Edit config.env with your Entra ID/Databricks settings
 python app.py
@@ -60,7 +60,7 @@ python app.py
 ```
 
 ### 3. **Custom App - User Authentication (Okta SPA)** 📱
-**Directory:** `custom-app-obo-user-okta-spa/`
+**Directory:** `custom-app-user-okta-spa/`
 
 A Flask web application that authenticates users via Okta OAuth 2.0 with PKCE (Single Page App configuration).
 
@@ -73,14 +73,14 @@ A Flask web application that authenticates users via Okta OAuth 2.0 with PKCE (S
 
 **Quick Start:**
 ```bash
-cd custom-app-obo-user-okta-spa
+cd custom-app-user-okta-spa
 cp config.env.example config.env
 # Edit config.env with your Okta/Databricks settings
 python app.py
 ```
 
 ### 4. **Custom App - User Authentication (Okta Web App)** 🌐
-**Directory:** `custom-app-obo-user-okta-web/`
+**Directory:** `custom-app-user-okta-web/`
 
 A Flask web application that authenticates users via Okta OAuth 2.0 with client secret + PKCE (Web App configuration).
 
@@ -93,14 +93,14 @@ A Flask web application that authenticates users via Okta OAuth 2.0 with client 
 
 **Quick Start:**
 ```bash
-cd custom-app-obo-user-okta-web
+cd custom-app-user-okta-web
 cp config.env.example config.env
 # Edit config.env with your Okta/Databricks settings
 python app.py
 ```
 
 ### 5. **Custom App - Service Principal (Okta)** 🔧
-**Directory:** `custom-app-obo-sp-okta-service/`
+**Directory:** `custom-app-sp-okta-service/`
 
 A Flask web application that authenticates as a service principal via Okta OAuth 2.0 Client Credentials flow.
 
@@ -113,7 +113,7 @@ A Flask web application that authenticates as a service principal via Okta OAuth
 
 **Quick Start:**
 ```bash
-cd custom-app-obo-sp-okta-service
+cd custom-app-sp-okta-service
 cp config.env.example config.env
 # Edit config.env with your Okta service principal credentials
 python app.py
@@ -207,20 +207,20 @@ App → Okta → Access Token → Databricks (No user interaction)
 
 ### Okta Configuration
 
-#### For SPA App (`custom-app-obo-user-okta-spa`)
+#### For SPA App (`custom-app-user-okta-spa`)
 - **Application Type**: Single-Page App (SPA)
 - **Grant Types**: Authorization Code with PKCE
 - **Redirect URIs**: `http://localhost:5000/callback`
 - **Scopes**: `openid`, `profile`, `email`, `all-apis`, `offline_access`
 
-#### For Web App (`custom-app-obo-user-okta-web`)
+#### For Web App (`custom-app-user-okta-web`)
 - **Application Type**: Web Application
 - **Grant Types**: Authorization Code with PKCE
 - **Redirect URIs**: `http://localhost:6001/callback`
 - **Scopes**: `openid`, `profile`, `email`, `all-apis`, `offline_access`
 - **Client Authentication**: Client Secret (Basic)
 
-#### For Service Principal (`custom-app-obo-sp-okta-service`)
+#### For Service Principal (`custom-app-sp-okta-service`)
 - **Application Type**: API Services (Service App)
 - **Grant Types**: Client Credentials
 - **Scopes**: `all-apis`
@@ -252,7 +252,7 @@ App → Okta → Access Token → Databricks (No user interaction)
 ### 1. Clone and Navigate
 ```bash
 git clone https://github.com/surajkaruvel/custom-app-oauth-databricks.git
-cd custom-app-oauth-databricks/custom-app-obo-user-okta-spa
+cd custom-app-oauth-databricks/custom-app-user-okta-spa
 ```
 
 ### 2. Configure Environment
@@ -275,11 +275,11 @@ Open `http://localhost:5000` in your browser and sign in with Okta.
 
 ```
 custom-app-oauth-databricks/
-├── custom-app-obo-user-entra-msal/        # 🔐 Entra ID User Auth (MSAL)
+├── custom-app-user-entra-msal/            # 🔐 Entra ID User Auth (MSAL)
 ├── custom-app-sp-entra-msal/              # 🤖 Entra ID Service Principal (MSAL)
-├── custom-app-obo-user-okta-spa/          # 📱 Okta SPA User Auth
-├── custom-app-obo-user-okta-web/          # 🌐 Okta Web App User Auth
-├── custom-app-obo-sp-okta-service/        # 🔧 Okta Service Principal
+├── custom-app-user-okta-spa/              # 📱 Okta SPA User Auth
+├── custom-app-user-okta-web/              # 🌐 Okta Web App User Auth
+├── custom-app-sp-okta-service/            # 🔧 Okta Service Principal
 ├── custom-app-oauth-confidential-dbrx-direct/  # 🔐 Databricks Confidential Client
 ├── custom-app-oauth-public-dbrx-direct/   # 🌍 Databricks Public Client
 │   ├── app.py                             # Main Flask application
@@ -324,7 +324,7 @@ custom-app-oauth-databricks/
 ### Getting Help
 
 1. Check application logs for detailed error messages
-2. Review the app-specific README in `custom-app-obo-user-okta-spa/`
+2. Review the app-specific README in `custom-app-user-okta-spa/`
 3. Verify configuration against the example files
 4. Test with minimal sample queries first
 
