@@ -1,0 +1,78 @@
+{% extends "base.html" %}
+
+{% block title %}Databricks SQL Setup - OBO Flow{% endblock %}
+
+{% block content %}
+<div style="text-align: center; margin-bottom: 30px;">
+    <h2 style="color: #2d3748;">🗃️ Databricks SQL Interface Setup</h2>
+    <p style="color: #718096; margin-top: 10px;">Configure your Databricks connection</p>
+</div>
+
+<div class="info-box" style="background: #e1f5fe; border-left-color: #0288d1;">
+    <h3 style="color: #01579b;">🔄 OBO Token Exchange</h3>
+    <p style="color: #01579b;">When you submit this form, the middle-tier will perform On-Behalf-Of token exchange with Microsoft Entra ID to obtain a Databricks token.</p>
+</div>
+
+<form method="POST" action="{{ url_for('sql_setup') }}" style="margin-top: 30px;">
+    <div class="form-group">
+        <label for="workspace_url">🏢 Databricks Workspace URL</label>
+        <input 
+            type="url" 
+            id="workspace_url" 
+            name="workspace_url" 
+            class="form-control"
+            placeholder="https://your-workspace.cloud.databricks.com"
+            required
+        >
+        <small style="color: #718096; display: block; margin-top: 5px;">
+            Example: https://adb-1234567890123456.7.azuredatabricks.net
+        </small>
+    </div>
+
+    <div class="form-group">
+        <label for="warehouse_id">🏢 SQL Warehouse ID</label>
+        <input 
+            type="text" 
+            id="warehouse_id" 
+            name="warehouse_id" 
+            class="form-control"
+            placeholder="Enter your SQL Warehouse ID"
+            required
+        >
+        <small style="color: #718096; display: block; margin-top: 5px;">
+            Find this in your Databricks workspace under SQL Warehouses
+        </small>
+    </div>
+
+    <button type="submit" class="btn btn-primary" style="width: 100%; font-size: 1.1em; padding: 15px;">
+        🔄 Perform OBO Exchange & Launch SQL Interface
+    </button>
+</form>
+
+<div class="info-box" style="margin-top: 30px;">
+    <h3>💡 How to find your SQL Warehouse ID</h3>
+    <ol style="margin-left: 20px; margin-top: 10px; line-height: 1.8;">
+        <li>Go to your Databricks workspace</li>
+        <li>Navigate to <strong>SQL Warehouses</strong> in the sidebar</li>
+        <li>Click on your warehouse</li>
+        <li>Copy the ID from the URL or warehouse details</li>
+    </ol>
+    <p style="margin-top: 15px; color: #4a5568;">
+        Example ID: <code style="background: #2d3748; color: #e2e8f0; padding: 2px 8px; border-radius: 4px;">abc123def456</code>
+    </p>
+</div>
+
+<div class="info-box" style="margin-top: 20px; background: #f8f9fa; border-left-color: #667eea;">
+    <h3>📋 Default Settings</h3>
+    <p style="margin-top: 10px;">The following defaults will be used:</p>
+    <ul style="margin-left: 20px; margin-top: 10px; line-height: 1.8;">
+        <li><strong>Catalog:</strong> hive_metastore</li>
+        <li><strong>Schema:</strong> default</li>
+    </ul>
+    <p style="margin-top: 10px; color: #718096; font-size: 0.9em;">You can change these in your SQL queries if needed.</p>
+</div>
+
+<div class="nav-links" style="text-align: center;">
+    <a href="{{ url_for('dashboard') }}" class="btn btn-secondary">⬅️ Back to Dashboard</a>
+</div>
+{% endblock %}

@@ -1,0 +1,100 @@
+{% extends "base.html" %}
+
+{% block title %}Snowflake SQL Setup - OBO Flow{% endblock %}
+
+{% block content %}
+<div style="text-align: center; margin-bottom: 30px;">
+    <h2 style="color: #2d3748;">❄️ Snowflake SQL Interface Setup</h2>
+    <p style="color: #718096; margin-top: 10px;">Configure your Snowflake connection</p>
+</div>
+
+<div class="info-box" style="background: #e1f5fe; border-left-color: #0288d1;">
+    <h3 style="color: #01579b;">🔄 OBO Token Exchange</h3>
+    <p style="color: #01579b;">When you submit this form, the middle-tier will perform On-Behalf-Of token exchange with Microsoft Entra ID to obtain a Snowflake token.</p>
+</div>
+
+<form method="POST" action="{{ url_for('snowflake_setup') }}" style="margin-top: 30px;">
+    <div class="form-group">
+        <label for="account">❄️ Snowflake Account</label>
+        <input 
+            type="text" 
+            id="account" 
+            name="account" 
+            class="form-control"
+            placeholder="your-account.region or full hostname"
+            required
+        >
+        <small style="color: #718096; display: block; margin-top: 5px;">
+            Examples:<br>
+            • Account format: <code style="background: #f0f0f0; padding: 2px 4px;">mycompany.us-east-1</code><br>
+            • Full hostname: <code style="background: #f0f0f0; padding: 2px 4px;">mycompany.us-east-1.snowflakecomputing.com</code>
+        </small>
+    </div>
+
+    <div class="form-group">
+        <label for="database">📚 Database (Optional)</label>
+        <input 
+            type="text" 
+            id="database" 
+            name="database" 
+            class="form-control"
+            placeholder="Enter database name"
+        >
+        <small style="color: #718096; display: block; margin-top: 5px;">
+            Leave empty to use default
+        </small>
+    </div>
+
+    <div class="form-group">
+        <label for="schema">📁 Schema (Optional)</label>
+        <input 
+            type="text" 
+            id="schema" 
+            name="schema" 
+            class="form-control"
+            placeholder="Enter schema name"
+        >
+        <small style="color: #718096; display: block; margin-top: 5px;">
+            Leave empty to use default
+        </small>
+    </div>
+
+    <div class="form-group">
+        <label for="warehouse">🏢 Warehouse (Optional)</label>
+        <input 
+            type="text" 
+            id="warehouse" 
+            name="warehouse" 
+            class="form-control"
+            placeholder="Enter warehouse name"
+        >
+        <small style="color: #718096; display: block; margin-top: 5px;">
+            Leave empty to use default
+        </small>
+    </div>
+
+    <button type="submit" class="btn btn-primary" style="width: 100%; font-size: 1.1em; padding: 15px;">
+        🔄 Perform OBO Exchange & Launch SQL Interface
+    </button>
+</form>
+
+<div class="info-box" style="margin-top: 30px;">
+    <h3>💡 How to find your Snowflake account</h3>
+    <ol style="margin-left: 20px; margin-top: 10px; line-height: 1.8;">
+        <li>Go to your Snowflake console</li>
+        <li>Look at your Snowflake URL in the browser</li>
+        <li>Format: <code style="background: #2d3748; color: #e2e8f0; padding: 2px 8px; border-radius: 4px;">https://&lt;account&gt;.snowflakecomputing.com</code></li>
+        <li>You can enter either:
+            <ul style="margin-top: 5px;">
+                <li>Just the account part: <code style="background: #2d3748; color: #e2e8f0; padding: 2px 4px; border-radius: 4px;">pcokkyc-qc24760</code></li>
+                <li>Or the full hostname: <code style="background: #2d3748; color: #e2e8f0; padding: 2px 4px; border-radius: 4px;">pcokkyc-qc24760.snowflakecomputing.com</code></li>
+            </ul>
+        </li>
+    </ol>
+</div>
+
+<div class="nav-links" style="text-align: center;">
+    <a href="{{ url_for('dashboard') }}" class="btn btn-secondary">⬅️ Back to Dashboard</a>
+</div>
+{% endblock %}
+

@@ -1,0 +1,250 @@
+{% extends "base.html" %}
+
+{% block title %}Snowflake SQL Interface - OBO Flow{% endblock %}
+
+{% block extra_styles %}
+<style>
+    .sql-editor {
+        width: 100%;
+        min-height: 150px;
+        padding: 15px;
+        border: 2px solid #e2e8f0;
+        border-radius: 8px;
+        font-family: 'Courier New', monospace;
+        font-size: 14px;
+        resize: vertical;
+    }
+
+    .sql-editor:focus {
+        outline: none;
+        border-color: #667eea;
+    }
+
+    .results-table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 20px;
+        background: white;
+        border-radius: 8px;
+        overflow: hidden;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+
+    .results-table th {
+        background: linear-gradient(135deg, #29B5E8, #1E88C7);
+        color: white;
+        padding: 12px;
+        text-align: left;
+        font-weight: 600;
+    }
+
+    .results-table td {
+        padding: 10px 12px;
+        border-bottom: 1px solid #e2e8f0;
+    }
+
+    .results-table tr:hover {
+        background: #f7fafc;
+    }
+
+    .loading {
+        text-align: center;
+        padding: 20px;
+        color: #718096;
+    }
+
+    .spinner {
+        border: 3px solid #f3f3f3;
+        border-top: 3px solid #29B5E8;
+        border-radius: 50%;
+        width: 40px;
+        height: 40px;
+        animation: spin 1s linear infinite;
+        margin: 0 auto;
+    }
+
+    @keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+    }
+
+    .error-message {
+        background: #fee;
+        border-left: 4px solid #dc3545;
+        padding: 15px;
+        border-radius: 8px;
+        color: #721c24;
+        margin-top: 20px;
+    }
+
+    .success-message {
+        background: #d4edda;
+        border-left: 4px solid #28a745;
+        padding: 15px;
+        border-radius: 8px;
+        color: #155724;
+        margin-top: 20px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div style="text-align: center; margin-bottom: 30px;">
+    <h2 style="color: #2d3748;">❄️ Snowflake SQL Execution Interface</h2>
+    <p style="color: #718096; margin-top: 10px;">Execute SQL queries on Snowflake (OBO Token)</p>
+</div>
+
+<div class="info-box">
+    <h3>⚙️ Configuration</h3>
+    <div style="margin-top: 10px;">
+        <p><strong>Account:</strong> {{ account }}</p>
+        {% if database %}
+        <p><strong>Database:</strong> {{ database }}</p>
+        {% endif %}
+        {% if schema %}
+        <p><strong>Schema:</strong> {{ schema }}</p>
+        {% endif %}
+        {% if warehouse %}
+        <p><strong>Warehouse:</strong> {{ warehouse }}</p>
+        {% endif %}
+        <p><strong>Auth:</strong> On-Behalf-Of (OBO) Flow</p>
+        <p><strong>Token Expires:</strong> {{ expires_at.strftime('%Y-%m-%d %H:%M:%S') if expires_at else 'Unknown' }}</p>
+        <p><strong>Time Remaining:</strong> {{ (expires_in // 60)|int }} minutes</p>
+    </div>
+</div>
+
+<div style="margin-top: 30px;">
+    <div class="form-group">
+        <label for="sqlQuery">📝 SQL Query</label>
+        <textarea 
+            id="sqlQuery" 
+            class="sql-editor" 
+            placeholder="Enter your SQL query here...&#10;Example: SELECT CURRENT_USER(), CURRENT_DATABASE()"
+        >SELECT CURRENT_USER(), CURRENT_DATABASE(), CURRENT_TIMESTAMP()</textarea>
+    </div>
+
+    <button onclick="executeQuery()" class="btn btn-primary" style="width: 100%; font-size: 1.1em; padding: 15px;">
+        ▶️ Execute Query
+    </button>
+</div>
+
+<div id="resultsContainer" style="margin-top: 30px;"></div>
+
+<div class="nav-links" style="text-align: center; margin-top: 30px;">
+    <a href="{{ url_for('dashboard') }}" class="btn btn-secondary">⬅️ Back to Dashboard</a>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+async function executeQuery() {
+    const query = document.getElementById('sqlQuery').value.trim();
+    const resultsContainer = document.getElementById('resultsContainer');
+    
+    if (!query) {
+        resultsContainer.innerHTML = '<div class="error-message">❌ Please enter a SQL query</div>';
+        return;
+    }
+    
+    // Show loading state
+    resultsContainer.innerHTML = `
+        <div class="loading">
+            <div class="spinner"></div>
+            <p style="margin-top: 15px;">Executing query on Snowflake with OBO token...</p>
+        </div>
+    `;
+    
+    try {
+        const response = await fetch('/api/execute-snowflake-sql', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                statement: query
+            })
+        });
+        
+        const data = await response.json();
+        
+        if (!response.ok) {
+            throw new Error(data.error || 'Query execution failed');
+        }
+        
+        displayResults(data);
+        
+    } catch (error) {
+        resultsContainer.innerHTML = `
+            <div class="error-message">
+                <strong>❌ Error:</strong> ${error.message}
+                <details style="margin-top: 10px;">
+                    <summary>Show details</summary>
+                    <pre style="margin-top: 10px; white-space: pre-wrap;">${JSON.stringify(error, null, 2)}</pre>
+                </details>
+            </div>
+        `;
+    }
+}
+
+function displayResults(data) {
+    const resultsContainer = document.getElementById('resultsContainer');
+    
+    // Snowflake API v2 response structure
+    if (data.resultSetMetaData && data.data) {
+        let html = '<div class="success-message">✅ Query executed successfully</div>';
+        html += '<table class="results-table">';
+        
+        // Table header
+        html += '<thead><tr>';
+        data.resultSetMetaData.rowType.forEach(column => {
+            html += `<th>${escapeHtml(column.name)}</th>`;
+        });
+        html += '</tr></thead>';
+        
+        // Table body
+        html += '<tbody>';
+        data.data.forEach(row => {
+            html += '<tr>';
+            row.forEach(cell => {
+                html += `<td>${escapeHtml(String(cell !== null ? cell : 'NULL'))}</td>`;
+            });
+            html += '</tr>';
+        });
+        html += '</tbody></table>';
+        
+        // Add row count
+        html += `<p style="margin-top: 15px; color: #718096; text-align: center;">
+            Showing ${data.data.length} row(s)
+        </p>`;
+        
+        resultsContainer.innerHTML = html;
+        
+    } else if (data.statementHandle) {
+        // Statement submitted but results might be pending
+        resultsContainer.innerHTML = '<div class="success-message">✅ Statement submitted. Statement handle: ' + data.statementHandle + '</div>';
+    } else {
+        resultsContainer.innerHTML = `
+            <div class="error-message">
+                <strong>❌ Unexpected response format</strong>
+                <pre style="margin-top: 10px;">${JSON.stringify(data, null, 2)}</pre>
+            </div>
+        `;
+    }
+}
+
+function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
+// Allow Ctrl+Enter to execute query
+document.getElementById('sqlQuery').addEventListener('keydown', function(e) {
+    if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+        e.preventDefault();
+        executeQuery();
+    }
+});
+</script>
+{% endblock %}
+

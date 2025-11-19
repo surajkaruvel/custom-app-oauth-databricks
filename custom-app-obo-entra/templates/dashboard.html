@@ -1,0 +1,93 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard - OBO Flow{% endblock %}
+
+{% block content %}
+<div style="text-align: center; margin-bottom: 30px;">
+    <h2 style="color: #2d3748;">👤 Welcome to Your Dashboard</h2>
+    <p style="color: #718096; margin-top: 10px;">Authenticated with middle-tier service</p>
+</div>
+
+<div class="info-box" style="background: #e8f5e9; border-left-color: #4caf50;">
+    <h3 style="color: #2e7d32;">✅ Authentication Status</h3>
+    <div style="margin-top: 15px;">
+        <p><strong>User:</strong> {{ user_email }}</p>
+        <p><strong>Authenticated:</strong> {{ authenticated_at }}</p>
+        <p><strong>Status:</strong> <span style="color: #28a745;">✅ Signed in to Middle-Tier</span></p>
+        {% if has_databricks_token %}
+        <p><strong>Databricks:</strong> <span style="color: #28a745;">✅ Token obtained</span></p>
+        {% else %}
+        <p><strong>Databricks:</strong> <span style="color: #6c757d;">⏳ Not yet accessed</span></p>
+        {% endif %}
+    </div>
+</div>
+
+<div class="info-box" style="margin-top: 30px;">
+    <h3>🔄 Available Interfaces</h3>
+    <p style="margin-top: 10px;">Choose which service you'd like to access. Each requires separate OBO token exchange.</p>
+</div>
+
+<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-top: 30px;">
+    <!-- Databricks Card -->
+    <div style="border: 2px solid #e2e8f0; border-radius: 12px; padding: 30px; text-align: center; transition: all 0.3s ease;">
+        <div style="font-size: 3em; margin-bottom: 15px;">🟠</div>
+        <h3 style="color: #2d3748; margin-bottom: 10px;">Databricks SQL</h3>
+        <p style="color: #718096; margin-bottom: 20px; line-height: 1.6;">
+            Execute SQL queries on Databricks using OBO token
+        </p>
+        {% if has_databricks_token %}
+        <span style="display: block; margin-bottom: 15px; color: #28a745; font-weight: 600;">✅ Token Active</span>
+        <a href="{{ url_for('sql_interface', warehouse_id=warehouse_id, catalog='hive_metastore', schema='default') }}" class="btn btn-primary" style="width: 100%;">
+            Go to Interface
+        </a>
+        {% else %}
+        <a href="{{ url_for('sql_setup') }}" class="btn btn-primary" style="width: 100%;">
+            Setup & Access
+        </a>
+        {% endif %}
+    </div>
+
+    <!-- Snowflake Card -->
+    <div style="border: 2px solid #e2e8f0; border-radius: 12px; padding: 30px; text-align: center; transition: all 0.3s ease;">
+        <div style="font-size: 3em; margin-bottom: 15px;">❄️</div>
+        <h3 style="color: #2d3748; margin-bottom: 10px;">Snowflake SQL</h3>
+        <p style="color: #718096; margin-bottom: 20px; line-height: 1.6;">
+            Execute SQL queries on Snowflake using OBO token
+        </p>
+        {% if has_snowflake_token %}
+        <span style="display: block; margin-bottom: 15px; color: #28a745; font-weight: 600;">✅ Token Active</span>
+        <a href="{{ url_for('snowflake_interface') }}" class="btn btn-primary" style="width: 100%;">
+            Go to Interface
+        </a>
+        {% else %}
+        <a href="{{ url_for('snowflake_setup') }}" class="btn btn-primary" style="width: 100%;">
+            Setup & Access
+        </a>
+        {% endif %}
+    </div>
+</div>
+
+<div style="margin-top: 20px; padding: 15px; background: #f8f9fa; border-radius: 8px; border-left: 4px solid #667eea;">
+    <strong>💡 How it works:</strong>
+    <ol style="margin: 10px 0 0 20px; line-height: 1.8;">
+        <li>Click "Setup & Access" for the service you want</li>
+        <li>Enter connection details (workspace URL, account, etc.)</li>
+        <li>Middle-tier performs OBO exchange with Entra ID</li>
+        <li>You receive a token scoped for that specific service</li>
+        <li>Execute SQL queries with your permissions</li>
+    </ol>
+</div>
+
+<style>
+    div[style*="grid-template-columns"] > div:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+        border-color: #667eea;
+    }
+</style>
+
+<div class="nav-links" style="text-align: center; margin-top: 30px;">
+    <a href="{{ url_for('logout') }}" class="btn btn-danger">🚪 Logout</a>
+</div>
+{% endblock %}
+

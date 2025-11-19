@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+
+{% block title %}Login - OBO Flow{% endblock %}
+
+{% block content %}
+<div style="text-align: center; margin-bottom: 40px;">
+    <h2 style="color: #2d3748; margin-bottom: 10px;">🔐 Middle-Tier Authentication</h2>
+    <p style="color: #718096; font-size: 1.1em;">Sign in to access services</p>
+</div>
+
+<div class="info-box">
+    <h3>🔄 How the OBO Flow Works</h3>
+    <p>This application demonstrates OAuth 2.0 On-Behalf-Of (OBO) flow:</p>
+    
+    <div style="margin: 20px 0; padding: 20px; background: white; border-radius: 8px;">
+        <div style="display: flex; align-items: center; gap: 15px; margin-bottom: 15px;">
+            <div style="background: linear-gradient(135deg, #667eea, #764ba2); color: white; width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold;">1</div>
+            <div style="flex: 1;">
+                <strong style="color: #2d3748;">Authenticate to Middle-Tier</strong>
+                <p style="color: #718096; margin: 5px 0 0 0;">Sign in with your Microsoft account</p>
+            </div>
+        </div>
+        
+        <div style="display: flex; align-items: center; gap: 15px; margin-bottom: 15px;">
+            <div style="background: linear-gradient(135deg, #667eea, #764ba2); color: white; width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold;">2</div>
+            <div style="flex: 1;">
+                <strong style="color: #2d3748;">Access Dashboard</strong>
+                <p style="color: #718096; margin: 5px 0 0 0;">View your authenticated status</p>
+            </div>
+        </div>
+        
+        <div style="display: flex; align-items: center; gap: 15px;">
+            <div style="background: linear-gradient(135deg, #667eea, #764ba2); color: white; width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold;">3</div>
+            <div style="flex: 1;">
+                <strong style="color: #2d3748;">Access Databricks</strong>
+                <p style="color: #718096; margin: 5px 0 0 0;">Token exchange happens on-behalf-of you</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div style="text-align: center; margin-top: 40px;">
+    <a href="{{ url_for('login') }}" class="btn btn-primary" style="font-size: 1.2em; padding: 18px 40px;">
+        🚀 Sign In with Microsoft
+    </a>
+</div>
+
+<div class="info-box" style="margin-top: 30px;">
+    <h3>✨ Key Benefits</h3>
+    <ul style="margin-left: 20px; margin-top: 10px; line-height: 1.8;">
+        <li>✅ Secure token delegation from middle-tier</li>
+        <li>✅ No direct credential exposure</li>
+        <li>✅ On-demand resource access</li>
+        <li>✅ Proper user context preservation</li>
+    </ul>
+</div>
+
+<div class="info-box" style="margin-top: 30px; background: #fff5e6; border-left-color: #ff9800;">
+    <h3 style="color: #e65100;">⚠️ Experimental Demo</h3>
+    <p style="color: #e65100;">This application is for demonstration purposes only. Do not use in production environments.</p>
+</div>
+{% endblock %}
