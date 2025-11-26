@@ -2,13 +2,13 @@
 
 ## Overview
 
-This document explains the OAuth 2.0 On-Behalf-Of (OBO) flow implementation for Databricks access using Microsoft Entra ID.
+This document explains the OAuth 2.0 On-Behalf-Of (OBO) flow implementation for **Databricks** and **Snowflake** access using Microsoft Entra ID. The middle-tier service exchanges user tokens for service-specific tokens to access APIs on behalf of the user.
 
 ## Architecture Diagram
 
 ```
 ┌──────────────────────────────────────────────────────────────────────────┐
-│                         OBO Flow Architecture                             │
+│                    Multi-Service OBO Flow Architecture                    │
 └──────────────────────────────────────────────────────────────────────────┘
 
 ┌─────────────┐                ┌──────────────────┐                ┌─────────────────┐
@@ -20,18 +20,20 @@ This document explains the OAuth 2.0 On-Behalf-Of (OBO) flow implementation for 
 └─────────────┘                └──────────────────┘                └─────────────────┘
                                         │                                    │
                                         │ Step 3                             │
-                                        │ (Token works directly!)            │
+                                        │ (Tokens work directly!)            │
                                         ↓                                    │
-                                ┌──────────────────┐                        │
-                                │                  │                        │
-                                │   Databricks     │                        │
-                                │     APIs         │                        │
-                                │  (SQL, Genie)    │                        │
-                                └──────────────────┘                        │
-                                                                             │
-                                        Federation Policy                   │
-                                        (Trusts API2)                        │
-                                        ←────────────────────────────────────┘
+                     ┌──────────────────┴──────────────────┐               │
+                     │                                      │               │
+              ┌──────▼──────────┐                  ┌───────▼────────┐     │
+              │   Databricks    │                  │   Snowflake    │     │
+              │     APIs        │                  │     APIs       │     │
+              │  (SQL, Genie)   │                  │  (SQL API v2)  │     │
+              └─────────────────┘                  └────────────────┘     │
+                     │                                      │               │
+         Federation Policy                      OAuth Integration          │
+         (Trusts API2)                          (Trusts API4)               │
+                     │                                      │               │
+                     └──────────────────────────────────────────────────────┘
 ```
 
 ## Flow Sequence
@@ -157,13 +159,19 @@ This document explains the OAuth 2.0 On-Behalf-Of (OBO) flow implementation for 
 - **Client ID**: `your-middletier-client-id`
 - **Redirect URI**: `http://localhost:9001/callback`
 - **Exposed API**: `api://{client_id}/access_as_user`
-- **Permissions**: Delegated permission to Databricks app
+- **Permissions**: Delegated permission to Databricks and Snowflake apps
 
 #### Databricks App (API2)
-- **Purpose**: Target resource for OBO token
+- **Purpose**: Target resource for Databricks OBO token
 - **Client ID**: `your-databricks-client-id`
 - **Exposed API**: `{client_id}/user_impersonation`
 - **Federation**: Configured in Databricks workspace
+
+#### Snowflake App (API4)
+- **Purpose**: Target resource for Snowflake OBO token
+- **Client ID**: `your-snowflake-client-id`
+- **Exposed API**: `api://{client_id}/session:scope:ACCOUNTADMIN` (or other roles)
+- **Integration**: SECURITY INTEGRATION configured in Snowflake account
 
 ### Token Types
 
@@ -171,12 +179,20 @@ This document explains the OAuth 2.0 On-Behalf-Of (OBO) flow implementation for 
 - **Audience**: `api://your-middletier-client-id`
 - **Scope**: `access_as_user`
 - **Purpose**: Represents user's authentication to middle-tier
+- **Usage**: Exchanged for service-specific OBO tokens
 
-#### OBO Token (API2)
+#### Databricks OBO Token (API2)
 - **Audience**: `your-databricks-client-id`
 - **Scope**: `user_impersonation`
 - **Purpose**: Enables middle-tier to access Databricks on behalf of user
 - **Usage**: Works **directly** with Databricks APIs (no additional exchange)
+
+#### Snowflake OBO Token (API4)
+- **Audience**: `api://your-snowflake-client-id`
+- **Scope**: `session:scope:ACCOUNTADMIN` (or other role)
+- **Purpose**: Enables middle-tier to access Snowflake on behalf of user with specified role
+- **Usage**: Works **directly** with Snowflake SQL API v2
+- **Role**: Embedded in token scope for automatic role assumption
 
 ## Security Model
 
@@ -184,16 +200,18 @@ This document explains the OAuth 2.0 On-Behalf-Of (OBO) flow implementation for 
 
 The OBO flow maintains the user's identity through the token chain:
 - Original token contains user's `sub` (subject) claim
-- OBO token inherits the `sub` claim
-- Databricks sees the original user, not the middle-tier service
+- OBO tokens inherit the `sub` claim
+- Services (Databricks, Snowflake) see the original user, not the middle-tier service
 - User's permissions apply to all operations
+- Each service token is scoped only to that service
 
 ### Consent and Permissions
 
-1. **User Consent**: User must consent to allow middle-tier to access Databricks
-2. **Delegated Permission**: Middle-tier must have delegated permission to Databricks app
+1. **User Consent**: User must consent to allow middle-tier to access services
+2. **Delegated Permissions**: Middle-tier must have delegated permission to each service app
 3. **Admin Consent**: Typically required for delegated permissions
-4. **Scope Limitation**: OBO token is scoped only to Databricks access
+4. **Scope Limitation**: Each OBO token is scoped only to its target service
+5. **Service Isolation**: Databricks token cannot access Snowflake and vice versa
 
 ### Token Lifecycle
 
@@ -202,36 +220,45 @@ The OBO flow maintains the user's identity through the token chain:
 │                      Token Lifecycle                            │
 └────────────────────────────────────────────────────────────────┘
 
-User Auth → Middle-Tier Token (3600s) → OBO Exchange → OBO Token (3600s)
-                    │                                        │
-                    │                                        │
-              Refresh Token                          Refresh Token
-              (if requested)                         (if requested)
-                    │                                        │
-                    ↓                                        ↓
-              Token Refresh                          Token Refresh
-              (transparent)                          (via OBO again)
+                    ┌─── Middle-Tier Token (3600s) ───┐
+                    │                                  │
+User Auth ──────────┤                                  ├─── Store in session
+                    │                                  │
+                    └──────────────┬───────────────────┘
+                                   │
+                    ┌──────────────┴──────────────┐
+                    │                             │
+            OBO Exchange (Databricks)     OBO Exchange (Snowflake)
+                    │                             │
+                    ↓                             ↓
+          Databricks Token (3600s)      Snowflake Token (3600s)
+                    │                             │
+                    │                             │
+          Works with Databricks APIs    Works with Snowflake APIs
 ```
 
 ## Comparison to Other Flows
 
-### OBO vs Direct Databricks OAuth
+### OBO vs Direct Service OAuth
 
 | Aspect | OBO Flow | Direct OAuth |
 |--------|----------|--------------|
-| **User Experience** | Authenticate to middle-tier | Authenticate to Databricks |
-| **Token Exchange** | Via Entra ID OBO | Via Databricks /oidc/v1/token |
-| **API Access** | Direct with OBO token | Direct with Databricks token |
+| **User Experience** | Authenticate to middle-tier | Authenticate to each service |
+| **Token Exchange** | Via Entra ID OBO | Via service /oidc/v1/token |
+| **API Access** | Direct with OBO token | Direct with service token |
 | **Middle-Tier** | Required | Optional |
-| **Complexity** | Higher (2 app registrations) | Lower (1 app registration) |
-| **Use Case** | Multi-tier architecture | Single-tier applications |
+| **Multi-Service** | Single auth for multiple services | Separate auth per service |
+| **Complexity** | Higher (multiple app registrations) | Lower per service |
+| **Use Case** | Multi-tier/multi-service architecture | Single-tier applications |
 
-### Key Differences
+### Key Advantages of OBO Flow
 
-1. **No Databricks Token Exchange**: OBO token works directly, unlike direct OAuth which requires `/oidc/v1/token` exchange
-2. **User Context**: Maintained through token delegation
-3. **Credential Security**: User never authenticates directly to Databricks
-4. **Flexibility**: Middle-tier can add business logic, rate limiting, etc.
+1. **Single Sign-On**: User authenticates once, accesses multiple services
+2. **No Service Token Exchange**: OBO tokens work directly (no `/oidc/v1/token` for Databricks)
+3. **User Context**: Identity maintained through token delegation
+4. **Credential Security**: User never authenticates directly to downstream services
+5. **Flexibility**: Middle-tier can add business logic, rate limiting, etc.
+6. **Role-Based Access**: Snowflake roles embedded in token scope
 
 ## Implementation Details
 
@@ -262,24 +289,38 @@ result = msal_app.acquire_token_by_authorization_code(
     code_verifier=code_verifier
 )
 
-# Step 3: OBO exchange
-obo_result = msal_app.acquire_token_on_behalf_of(
+# Step 3: OBO exchange for Databricks
+databricks_result = msal_app.acquire_token_on_behalf_of(
     user_assertion=result['access_token'],
     scopes=[f"{databricks_client_id}/user_impersonation"]
+)
+
+# Step 4: OBO exchange for Snowflake (when needed)
+snowflake_result = msal_app.acquire_token_on_behalf_of(
+    user_assertion=result['access_token'],
+    scopes=[f"api://{snowflake_client_id}/session:scope:ACCOUNTADMIN"]
 )
 ```
 
 ### Session Management
 
 ```python
-# Store only essential tokens
-session['databricks_token'] = obo_result['access_token']
-session['refresh_token'] = obo_result.get('refresh_token')
-session['expires_at'] = (datetime.now() + timedelta(seconds=expires_in)).isoformat()
+# Store middle-tier token for future OBO exchanges
+session['middle_tier_token'] = result['access_token']
+session['user_email'] = result.get('id_token_claims', {}).get('preferred_username')
+
+# Store service-specific tokens (on-demand when user accesses service)
+session['databricks_token'] = databricks_result['access_token']
+session['databricks_expires_at'] = (datetime.now() + timedelta(seconds=expires_in)).isoformat()
+
+session['snowflake_token'] = snowflake_result['access_token']
+session['snowflake_expires_at'] = (datetime.now() + timedelta(seconds=expires_in)).isoformat()
 
 # Clear temporary data
 session.pop('oauth_state', None)
-session.pop('code_verifier', None)
+
+# Note: For cookie size optimization, remove middle_tier_token after OBO exchanges
+# or implement server-side session storage (Redis) for production
 ```
 
 ## Troubleshooting Guide
@@ -289,16 +330,17 @@ session.pop('code_verifier', None)
 #### 1. OBO Exchange Fails with `invalid_grant`
 
 **Causes**:
-- Missing delegated permission from middle-tier to Databricks app
+- Missing delegated permission from middle-tier to service app
 - Admin consent not granted
 - Incorrect scope format
 
 **Solutions**:
 - Verify delegated permission exists in middle-tier app
-- Grant admin consent
-- Ensure scope is `{databricks_client_id}/user_impersonation`
+- Grant admin consent for all required API permissions
+- Ensure Databricks scope: `{databricks_client_id}/user_impersonation`
+- Ensure Snowflake scope: `api://{snowflake_client_id}/session:scope:ACCOUNTADMIN`
 
-#### 2. Token Works But API Calls Fail
+#### 2. Databricks: Token Works But API Calls Fail
 
 **Causes**:
 - Databricks federation not configured
@@ -310,7 +352,42 @@ session.pop('code_verifier', None)
 - Verify token audience matches Databricks app ID
 - Check user permissions in Databricks workspace
 
-#### 3. User Gets Consent Screen Every Time
+#### 3. Snowflake: Error 390317 (Role Not in Access Token)
+
+**Causes**:
+- SECURITY INTEGRATION missing `EXTERNAL_OAUTH_ANY_ROLE_MODE = 'ENABLE'`
+- User not mapped correctly in Snowflake
+- Role not granted to user
+
+**Solutions**:
+```sql
+-- Enable role mode
+ALTER SECURITY INTEGRATION entra_oauth SET 
+  EXTERNAL_OAUTH_ANY_ROLE_MODE = 'ENABLE';
+
+-- Grant role to user
+GRANT ROLE ACCOUNTADMIN TO USER "user@domain.com";
+
+-- Set default role
+ALTER USER "user@domain.com" SET DEFAULT_ROLE = 'ACCOUNTADMIN';
+```
+
+#### 4. Snowflake: Error 390194 (No Default Role)
+
+**Solution**: Either set a default role in Snowflake, or use role-based scope (recommended)
+
+#### 5. Session Cookie Too Large Warning
+
+**Causes**:
+- Multiple large JWT tokens stored in session (middle-tier + databricks + snowflake)
+- Cookie size exceeds 4093 byte browser limit
+
+**Solutions**:
+- Remove middle-tier token after OBO exchanges
+- Only store one service token at a time (swap when switching services)
+- Implement server-side session storage (Redis) for production
+
+#### 6. User Gets Consent Screen Every Time
 
 **Causes**:
 - Refresh token not stored/used

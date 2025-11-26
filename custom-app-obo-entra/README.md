@@ -1,21 +1,23 @@
-# Databricks OAuth - On-Behalf-Of (OBO) Flow with Microsoft Entra ID
+# OAuth 2.0 On-Behalf-Of (OBO) Flow - Databricks & Snowflake
 
 > ⚠️ **EXPERIMENTAL - NOT FOR PRODUCTION USE**  
 > This is a demonstration application for OAuth 2.0 On-Behalf-Of flow. Use at your own risk.
 
 ## Overview
 
-This application demonstrates the **OAuth 2.0 On-Behalf-Of (OBO) flow** with Microsoft Entra ID for Databricks access. In this flow, a middle-tier service exchanges a user's token for another token to access Databricks APIs on behalf of the user.
+This application demonstrates the **OAuth 2.0 On-Behalf-Of (OBO) flow** with Microsoft Entra ID for accessing **Databricks** and **Snowflake** APIs. In this flow, a middle-tier service exchanges a user's token for service-specific tokens to access APIs on behalf of the user.
 
 ### Key Features
 
-- ✅ **OBO Token Exchange**: Middle-tier exchanges user token for Databricks access
-- ✅ **Direct API Access**: Token works directly with Databricks (no /oidc/v1/token exchange)
+- ✅ **OBO Token Exchange**: Middle-tier exchanges user token for Databricks & Snowflake access
+- ✅ **Direct API Access**: Tokens work directly with service APIs (no additional exchange)
+- ✅ **Multi-Service Support**: Access both Databricks and Snowflake in the same session
 - ✅ **User Context Preservation**: Maintains user identity through token delegation
 - ✅ **MSAL Integration**: Uses Microsoft Authentication Library for Python
 - ✅ **PKCE Support**: Implements Proof Key for Code Exchange for security
-- ✅ **SQL Execution**: Run SQL queries with OBO token
-- ✅ **AI Assistant**: Interact with Databricks Genie using OBO token
+- ✅ **Databricks SQL**: Execute SQL queries on Databricks with OBO token
+- ✅ **Snowflake SQL**: Execute SQL queries on Snowflake with role-based access
+- ✅ **Role-Based Authentication**: Embed Snowflake roles in token scope
 
 ## Architecture
 
@@ -24,7 +26,12 @@ This application demonstrates the **OAuth 2.0 On-Behalf-Of (OBO) flow** with Mic
 │    User     │───→│  Middle-Tier     │───→│   Databricks    │
 │             │    │  (This App)      │    │     APIs        │
 └─────────────┘    └──────────────────┘    └─────────────────┘
-                            │
+                            │                       │
+                            │                       ↓
+                            │               ┌─────────────────┐
+                            │               │   Snowflake     │
+                            │               │     APIs        │
+                            │               └─────────────────┘
                             ↓ OBO Exchange
                    ┌─────────────────────┐
                    │   Microsoft Entra   │
@@ -36,17 +43,20 @@ This application demonstrates the **OAuth 2.0 On-Behalf-Of (OBO) flow** with Mic
 
 1. **User Authentication**: User authenticates to the middle-tier app with authorization code flow + PKCE
 2. **Token Acquisition**: Middle-tier receives user's access token
-3. **OBO Exchange**: Middle-tier calls Entra ID to exchange the user token for a Databricks token
-4. **API Access**: The OBO token works **directly** with Databricks APIs (no additional token exchange)
+3. **Service Selection**: User chooses to access Databricks or Snowflake
+4. **OBO Exchange**: Middle-tier calls Entra ID to exchange the user token for a service-specific token
+5. **API Access**: The OBO token works **directly** with service APIs (no additional token exchange)
 
 ## Prerequisites
 
 1. **Microsoft Entra ID Tenant** with admin access
-2. **Two App Registrations in Entra ID**:
+2. **App Registrations in Entra ID**:
    - Middle-Tier App (this application)
-   - Databricks App (for OBO token scope)
-3. **Databricks Workspace** with federation configured
-4. **Python 3.8+** installed
+   - Databricks App (for Databricks OBO token scope)
+   - Snowflake App (for Snowflake OBO token scope)
+3. **Databricks Workspace** with federation configured (optional)
+4. **Snowflake Account** with OAuth integration configured (optional)
+5. **Python 3.8+** installed
 
 ## Setup Instructions
 
@@ -70,7 +80,20 @@ This application demonstrates the **OAuth 2.0 On-Behalf-Of (OBO) flow** with Mic
    - Description: "Access Databricks on behalf of the user"
 3. Note the **Application (client) ID** - this will be used in the OBO token scope
 
-### 3. Configure Databricks Federation
+### 3. Snowflake App Registration (API4)
+
+1. Create a separate app registration for Snowflake
+2. **Expose an API**:
+   - Add scope: `session:scope:ACCOUNTADMIN` (or other role names like PUBLIC, SYSADMIN)
+   - Description: "Access Snowflake with specific role on behalf of the user"
+3. Note the **Application (client) ID** - this will be used in the Snowflake token scope
+
+**Role-Based Scopes:**
+- `session:scope:PUBLIC` - Basic access
+- `session:scope:SYSADMIN` - System admin access
+- `session:scope:ACCOUNTADMIN` - Full admin access
+
+### 4. Configure Databricks Federation
 
 Configure your Databricks workspace to trust tokens from your Databricks app registration:
 
@@ -102,7 +125,7 @@ REDIRECT_URI=http://localhost:9001/callback
 FLASK_SECRET_KEY=your-secure-random-secret-key
 ```
 
-### 5. Install Dependencies
+### 7. Install Dependencies
 
 ```bash
 # Create virtual environment (recommended)
@@ -113,7 +136,7 @@ source venv/bin/activate  # On Windows: venv\Scripts\activate
 pip install -r requirements.txt
 ```
 
-### 6. Run Application
+### 8. Run Application
 
 ```bash
 # Using the provided script
@@ -128,18 +151,34 @@ The application will be available at: `http://localhost:9001`
 
 ## Usage
 
+### Accessing Databricks
+
 1. **Navigate** to `http://localhost:9001`
-2. **Enter** your Databricks workspace URL
-3. **Authenticate** with your Microsoft credentials
-4. **Choose** SQL Interface or AI Assistant
-5. **Execute** queries or chat with Genie using the OBO token
+2. **Authenticate** with your Microsoft credentials
+3. **Click** "Databricks SQL" card on the dashboard
+4. **Enter** workspace URL and warehouse ID
+5. **Execute** SQL queries using the OBO token
+
+### Accessing Snowflake
+
+1. **Navigate** to `http://localhost:9001`
+2. **Authenticate** with your Microsoft credentials
+3. **Click** "Snowflake SQL" card on the dashboard
+4. **Enter** Snowflake account details:
+   - Account (e.g., `mycompany.us-east-1`)
+   - Database (optional)
+   - Schema (optional)
+   - Warehouse (optional)
+   - Role (optional, defaults to token scope role)
+5. **Execute** SQL queries using the OBO token
 
 ## OBO Flow Details
 
-### Token Exchange Request
+### Token Exchange Requests
 
-The middle-tier uses MSAL to perform the OBO exchange:
+The middle-tier uses MSAL to perform OBO exchanges for each service:
 
+**Databricks:**
 ```python
 result = msal_app.acquire_token_on_behalf_of(
     user_assertion=middle_tier_token,
@@ -147,51 +186,81 @@ result = msal_app.acquire_token_on_behalf_of(
 )
 ```
 
+**Snowflake:**
+```python
+result = msal_app.acquire_token_on_behalf_of(
+    user_assertion=middle_tier_token,
+    scopes=["api://<snowflake-app-client-id>/session:scope:ACCOUNTADMIN"]
+)
+```
+
 ### Key Points
 
-- **No Databricks Token Exchange**: The OBO token works directly with Databricks APIs
-- **User Context**: The token maintains the user's identity and permissions
+- **No Additional Token Exchange**: OBO tokens work directly with service APIs
+- **User Context**: Tokens maintain the user's identity and permissions
+- **Role-Based Access**: Snowflake roles embedded in token scope
 - **Delegated Permissions**: The middle-tier acts on behalf of the user
 - **Secure**: The middle-tier never sees the user's credentials
+- **Multi-Service**: Can access both services in the same session
 
 ## API Endpoints
 
 | Endpoint | Method | Description |
 |----------|--------|-------------|
-| `/` | GET | Home page |
-| `/login` | POST | Initiate OAuth login |
+| `/` | GET | Home page - initial login screen |
+| `/login` | GET | Initiate OAuth login |
 | `/callback` | GET | OAuth callback handler |
-| `/databricks` | GET | Interface selection page |
-| `/sql-setup` | GET | SQL interface setup |
-| `/sql-interface` | GET | SQL execution interface |
-| `/chat-setup` | GET | AI assistant setup |
-| `/chat-interface` | GET | AI chat interface |
-| `/api/execute-sql` | POST | Execute SQL query |
-| `/api/chat` | POST | Send message to Genie |
+| `/dashboard` | GET | Service selection dashboard |
+| **Databricks** | | |
+| `/sql-setup` | GET/POST | Databricks SQL interface setup |
+| `/sql-interface` | GET | Databricks SQL execution interface |
+| `/api/execute-sql` | POST | Execute SQL query on Databricks |
+| **Snowflake** | | |
+| `/snowflake-setup` | GET/POST | Snowflake SQL interface setup |
+| `/snowflake-interface` | GET | Snowflake SQL execution interface |
+| `/api/execute-snowflake-sql` | POST | Execute SQL query on Snowflake |
+| **Common** | | |
 | `/logout` | GET | Clear session and logout |
 
 ## Troubleshooting
 
-### OBO Exchange Fails
+### Databricks Issues
 
-**Error**: `invalid_grant` or similar
-
-**Solutions**:
+**OBO Exchange Fails** (`invalid_grant`)
 1. Verify the middle-tier app has delegated permission to the Databricks app
 2. Ensure admin consent is granted
 3. Check that the Databricks scope is correctly configured
 4. Verify the user token has the correct audience
 
-### Token Works with Some APIs But Not Others
-
-**Solutions**:
+**Token Works with Some APIs But Not Others**
 1. Check Databricks federation policy configuration
 2. Verify the OBO token has the correct scopes
 3. Ensure the user has appropriate permissions in Databricks
 
+### Snowflake Issues
+
+**Error 390317**: "Role not listed in Access Token"
+1. Enable `EXTERNAL_OAUTH_ANY_ROLE_MODE = 'ENABLE'` in SECURITY INTEGRATION
+2. Grant the role to the user: `GRANT ROLE ACCOUNTADMIN TO USER "user@domain.com"`
+3. Set default role: `ALTER USER "user@domain.com" SET DEFAULT_ROLE = 'ACCOUNTADMIN'`
+
+**SSL Certificate Error** (hostname mismatch)
+- Ensure Snowflake account format is correct: `mycompany.us-east-1` or full hostname
+- App automatically handles both formats
+
+**User Not Found or Authentication Fails**
+1. Create user with correct LOGIN_NAME matching the `sub` claim from token
+2. Ensure SECURITY INTEGRATION audience matches your Snowflake app client ID
+3. Verify user has required role granted
+
 ### Session Issues
 
-**Solutions**:
+**Cookie Size Warning**
+- Session stores tokens for active services
+- Only one service token active at a time to stay under 4KB limit
+- For production, consider Redis-based session storage
+
+**Other Session Issues**
 1. Clear browser cookies
 2. Generate a new `FLASK_SECRET_KEY`
 3. Check that `config.env` values are correct
@@ -210,9 +279,18 @@ result = msal_app.acquire_token_on_behalf_of(
 
 ## References
 
+**OAuth & Authentication:**
 - [Microsoft Entra ID OBO Flow](https://learn.microsoft.com/en-us/azure/active-directory/develop/v2-oauth2-on-behalf-of-flow)
 - [MSAL Python Documentation](https://msal-python.readthedocs.io/)
+
+**Databricks:**
 - [Databricks OAuth Documentation](https://docs.databricks.com/dev-tools/auth/oauth.html)
+- [Databricks SQL Execution API](https://docs.databricks.com/api/workspace/statementexecution)
+
+**Snowflake:**
+- [Snowflake OAuth with Azure AD](https://docs.snowflake.com/en/user-guide/oauth-azure)
+- [Snowflake External OAuth](https://docs.snowflake.com/en/user-guide/oauth-external)
+- [Snowflake SQL API v2](https://docs.snowflake.com/en/developer-guide/sql-api/index)
 
 ## License
 
