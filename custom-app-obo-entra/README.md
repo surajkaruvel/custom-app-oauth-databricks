@@ -93,6 +93,9 @@ MIDDLETIER_CLIENT_SECRET=your-middletier-client-secret
 # Databricks Scope (API2)
 DATABRICKS_SCOPE=<databricks-app-client-id>/user_impersonation
 
+# Snowflake Scope (API4) - role is embedded in scope
+SNOWFLAKE_SCOPE=api://<snowflake-app-client-id>/session:scope:ACCOUNTADMIN
+
 # App Configuration
 PORT=9001
 REDIRECT_URI=http://localhost:9001/callback

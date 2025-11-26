@@ -73,6 +73,21 @@
         </small>
     </div>
 
+    <div class="form-group">
+        <label for="role">👤 Role (Optional)</label>
+        <input 
+            type="text" 
+            id="role" 
+            name="role" 
+            class="form-control"
+            placeholder="Leave empty - role is set in token scope"
+        >
+        <small style="color: #718096; display: block; margin-top: 5px;">
+            ℹ️ The role (ACCOUNTADMIN) is already embedded in the OAuth token scope (session:scope:ACCOUNTADMIN). 
+            Only specify a different role here if you need to override it.
+        </small>
+    </div>
+
     <button type="submit" class="btn btn-primary" style="width: 100%; font-size: 1.1em; padding: 15px;">
         🔄 Perform OBO Exchange & Launch SQL Interface
     </button>

@@ -107,6 +107,9 @@
         {% if warehouse %}
         <p><strong>Warehouse:</strong> {{ warehouse }}</p>
         {% endif %}
+        {% if role %}
+        <p><strong>Role:</strong> {{ role }}</p>
+        {% endif %}
         <p><strong>Auth:</strong> On-Behalf-Of (OBO) Flow</p>
         <p><strong>Token Expires:</strong> {{ expires_at.strftime('%Y-%m-%d %H:%M:%S') if expires_at else 'Unknown' }}</p>
         <p><strong>Time Remaining:</strong> {{ (expires_in // 60)|int }} minutes</p>

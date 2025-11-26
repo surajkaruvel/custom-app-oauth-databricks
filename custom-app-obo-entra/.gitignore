@@ -54,6 +54,8 @@ htmlcov/
 *.pem
 *.key
 
-# Production documentation (internal only)
+# Internal documentation (not for public repo)
 PRODUCTION-ARCHITECTURE.md
+SNOWFLAKE-DEBUG.md
+SNOWFLAKE-OAUTH-SETUP.md
 

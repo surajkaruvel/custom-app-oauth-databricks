@@ -139,6 +139,9 @@ def exchange_for_snowflake_token(middle_tier_token):
     
     This token works DIRECTLY with Snowflake APIs!
     """
+    import json
+    import base64
+    
     logger.info("\n" + "=" * 80)
     logger.info("🔄 ON-BEHALF-OF (OBO) TOKEN EXCHANGE - SNOWFLAKE")
     logger.info("=" * 80)
@@ -157,43 +160,55 @@ def exchange_for_snowflake_token(middle_tier_token):
         if 'access_token' in result:
             logger.info("✅ OBO token exchange successful!")
             logger.info(f"✅ Token expires in: {result.get('expires_in', 'unknown')} seconds")
-            logger.info("✅ This token works DIRECTLY with Snowflake APIs")
-            logger.info("=" * 80)
-            return result
-        else:
-            error_msg = result.get('error_description', result.get('error', 'Unknown error'))
-            logger.error(f"❌ OBO token exchange failed: {error_msg}")
-            raise Exception(f"OBO exchange failed: {error_msg}")
             
-    except Exception as e:
-        logger.error(f"❌ Error during OBO exchange: {str(e)}")
-        raise
-
-
-def exchange_for_snowflake_token(middle_tier_token):
-    """
-    Exchange middle-tier token for Snowflake token using OBO flow
-    """
-    logger.info("\n" + "=" * 80)
-    logger.info("🔄 ON-BEHALF-OF (OBO) TOKEN EXCHANGE - SNOWFLAKE")
-    logger.info("=" * 80)
-    logger.info(f"Exchanging middle-tier token for Snowflake access")
-    logger.info(f"Target scope: {config.snowflake_scope}")
-    
-    msal_app = create_msal_app()
-    
-    try:
-        # OBO token exchange
-        result = msal_app.acquire_token_on_behalf_of(
-            user_assertion=middle_tier_token,
-            scopes=[config.snowflake_scope]
-        )
-        
-        if 'access_token' in result:
-            logger.info("✅ OBO token exchange successful!")
-            logger.info(f"✅ Token expires in: {result.get('expires_in', 'unknown')} seconds")
-            logger.info("✅ This token works with Snowflake")
-            logger.info("=" * 80)
+            # Decode and inspect token (for debugging)
+            try:
+                token = result['access_token']
+                # JWT has 3 parts: header.payload.signature
+                parts = token.split('.')
+                if len(parts) >= 2:
+                    # Decode payload (add padding if needed)
+                    payload = parts[1]
+                    payload += '=' * (4 - len(payload) % 4)  # Add padding
+                    decoded = json.loads(base64.b64decode(payload))
+                    
+                    logger.info(f"📋 Token Claims:")
+                    logger.info(f"   - Audience (aud): {decoded.get('aud', 'N/A')}")
+                    logger.info(f"   - Issuer (iss): {decoded.get('iss', 'N/A')}")
+                    logger.info(f"   - Subject (sub): {decoded.get('sub', 'N/A')}")
+                    
+                    scopes = decoded.get('scp', 'N/A')
+                    logger.info(f"   - Scopes (scp): {scopes}")
+                    
+                    # Check if role is embedded in scope
+                    # Format: session:scope:ACCOUNTADMIN or just ACCOUNTADMIN
+                    scope_str = str(scopes)
+                    if 'session:scope:' in scope_str:
+                        role_match = scope_str.split('session:scope:')
+                        if len(role_match) > 1:
+                            role_name = role_match[1].split()[0]  # Get first word after session:scope:
+                            logger.info(f"   🎭 Role embedded in token: {role_name}")
+                            logger.info(f"   ✅ Token will automatically assume {role_name} role in Snowflake")
+                    elif any(role in scope_str for role in ['ACCOUNTADMIN', 'SYSADMIN', 'PUBLIC', 'SECURITYADMIN']):
+                        # Fallback: direct role name
+                        for role in ['ACCOUNTADMIN', 'SYSADMIN', 'PUBLIC', 'SECURITYADMIN']:
+                            if role in scope_str:
+                                logger.info(f"   🎭 Role embedded in token: {role}")
+                                logger.info(f"   ✅ Token will automatically assume {role} role in Snowflake")
+                                break
+                    
+                    # Check if audience matches Snowflake client ID from config
+                    expected_aud = config.snowflake_scope.split('/')[2] if '/' in config.snowflake_scope else ''
+                    actual_aud = decoded.get('aud', '')
+                    if expected_aud and (expected_aud in actual_aud or actual_aud in expected_aud):
+                        logger.info(f"   ✅ Audience matches Snowflake app")
+                    elif expected_aud:
+                        logger.warning(f"   ⚠️  Audience mismatch detected")
+            except Exception as decode_err:
+                logger.warning(f"Could not decode token for inspection: {decode_err}")
+            
+            logger.info("✅ This token works DIRECTLY with Snowflake APIs")
+            logger.info("=" * 80 + "\n")
             return result
         else:
             error_msg = result.get('error_description', result.get('error', 'Unknown error'))
@@ -515,6 +530,7 @@ def snowflake_setup():
         database = request.form.get('database')
         schema = request.form.get('schema')
         warehouse = request.form.get('warehouse')
+        role = request.form.get('role')
         
         if not account:
             flash('Please provide Snowflake account name', 'error')
@@ -546,6 +562,7 @@ def snowflake_setup():
                 session['snowflake_database'] = database or ''
                 session['snowflake_schema'] = schema or ''
                 session['snowflake_warehouse'] = warehouse or ''
+                session['snowflake_role'] = role or ''
                 session['snowflake_token_obtained'] = datetime.now().isoformat()
                 
                 # Calculate expiration
@@ -570,6 +587,7 @@ def snowflake_setup():
             session['snowflake_database'] = database or ''
             session['snowflake_schema'] = schema or ''
             session['snowflake_warehouse'] = warehouse or ''
+            session['snowflake_role'] = role or ''
         
         # Redirect to Snowflake interface
         return redirect(url_for('snowflake_interface'))
@@ -597,6 +615,7 @@ def snowflake_interface():
     database = session.get('snowflake_database', '')
     schema = session.get('snowflake_schema', '')
     warehouse = session.get('snowflake_warehouse', '')
+    role = session.get('snowflake_role', '')
     
     expires_at_str = session.get('snowflake_expires_at')
     if expires_at_str:
@@ -611,6 +630,7 @@ def snowflake_interface():
                          database=database,
                          schema=schema,
                          warehouse=warehouse,
+                         role=role,
                          expires_at=expires_at,
                          expires_in=expires_in)
 
@@ -628,6 +648,7 @@ def execute_snowflake_sql():
     database = session.get('snowflake_database')
     schema = session.get('snowflake_schema')
     warehouse = session.get('snowflake_warehouse')
+    role = session.get('snowflake_role')
     
     if not sql_statement:
         return jsonify({'error': 'Missing SQL statement'}), 400
@@ -667,9 +688,13 @@ def execute_snowflake_sql():
             request_data['schema'] = schema
         if warehouse:
             request_data['warehouse'] = warehouse
+        if role:
+            request_data['role'] = role
         
         logger.info(f"Executing Snowflake SQL with OBO token: {sql_statement[:100]}...")
         logger.info(f"Snowflake account: {account}")
+        logger.info(f"Snowflake URL: {url}")
+        logger.info(f"Request data: database={database}, schema={schema}, warehouse={warehouse}, role={role}")
         
         response = requests.post(
             url,
@@ -678,12 +703,35 @@ def execute_snowflake_sql():
             timeout=65
         )
         
+        # Log response details before raising for status
+        logger.info(f"Snowflake response status: {response.status_code}")
+        
+        if not response.ok:
+            # Try to get detailed error from Snowflake
+            try:
+                error_body = response.json()
+                logger.error(f"Snowflake error response: {error_body}")
+            except:
+                logger.error(f"Snowflake error response (raw): {response.text}")
+        
         response.raise_for_status()
         return jsonify(response.json())
         
     except requests.exceptions.RequestException as e:
         logger.error(f"Snowflake SQL execution error: {str(e)}")
-        error_detail = e.response.json() if hasattr(e, 'response') and e.response else str(e)
+        
+        # Enhanced error detail extraction
+        error_detail = str(e)
+        if hasattr(e, 'response') and e.response is not None:
+            try:
+                error_json = e.response.json()
+                logger.error(f"Snowflake detailed error: {error_json}")
+                error_detail = error_json
+            except:
+                error_text = e.response.text
+                logger.error(f"Snowflake error text: {error_text}")
+                error_detail = error_text
+        
         return jsonify({'error': str(e), 'detail': error_detail}), 500
 
 
