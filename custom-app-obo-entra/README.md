@@ -22,16 +22,15 @@ This application demonstrates the **OAuth 2.0 On-Behalf-Of (OBO) flow** with Mic
 ## Architecture
 
 ```
-┌─────────────┐    ┌──────────────────┐    ┌─────────────────┐
-│    User     │───→│  Middle-Tier     │───→│   Databricks    │
-│             │    │  (This App)      │    │     APIs        │
-└─────────────┘    └──────────────────┘    └─────────────────┘
-                            │                       │
-                            │                       ↓
-                            │               ┌─────────────────┐
-                            │               │   Snowflake     │
-                            │               │     APIs        │
-                            │               └─────────────────┘
+                                              ┌─────────────────┐
+                                         ┌───→│   Databricks    │
+                                         │    │     APIs        │
+┌─────────────┐    ┌──────────────────┐  │    └─────────────────┘
+│    User     │───→│  Middle-Tier     │──┤
+│             │    │  (This App)      │  │    ┌─────────────────┐
+└─────────────┘    └──────────────────┘  └───→│   Snowflake     │
+                            │                 │     APIs        │
+                            │                 └─────────────────┘
                             ↓ OBO Exchange
                    ┌─────────────────────┐
                    │   Microsoft Entra   │

@@ -18,22 +18,21 @@ This document explains the OAuth 2.0 On-Behalf-Of (OBO) flow implementation for 
 │             │ ←───────────── │                  │ ←───────────── │                 │
 │             │   Redirect     │  This Flask App  │  OBO Token     │                 │
 └─────────────┘                └──────────────────┘                └─────────────────┘
-                                        │                                    │
-                                        │ Step 3                             │
-                                        │ (Tokens work directly!)            │
-                                        ↓                                    │
-                     ┌──────────────────┴──────────────────┐               │
-                     │                                      │               │
-              ┌──────▼──────────┐                  ┌───────▼────────┐     │
-              │   Databricks    │                  │   Snowflake    │     │
-              │     APIs        │                  │     APIs       │     │
-              │  (SQL, Genie)   │                  │  (SQL API v2)  │     │
-              └─────────────────┘                  └────────────────┘     │
-                     │                                      │               │
-         Federation Policy                      OAuth Integration          │
-         (Trusts API2)                          (Trusts API4)               │
-                     │                                      │               │
-                     └──────────────────────────────────────────────────────┘
+                                        │                                    
+                                        │ Step 3                             
+                                        │ (Tokens work directly!)            
+                                        ↓                                    
+                     ┌──────────────────┴──────────────────┐
+                     │                                      │
+              ┌──────▼──────────┐                  ┌───────▼────────┐
+              │   Databricks    │                  │   Snowflake    │
+              │     APIs        │                  │     APIs       │
+              │  (SQL Execution)│                  │  (SQL API v2)  │
+              └─────────────────┘                  └────────────────┘
+                     ▲                                      ▲
+                     │                                      │
+         Federation Policy                      Security Integration
+         (Trusts Entra API2)                    (Trusts Entra API4)
 ```
 
 ## Flow Sequence
